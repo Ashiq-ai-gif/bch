@@ -14,7 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          company_type: Database["public"]["Enums"]["company_type"] | null
+          created_at: string
+          enrolled_program: Database["public"]["Enums"]["program_type"] | null
+          full_name: string
+          id: string
+          location: string | null
+          organization_name: string | null
+          phone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company_type?: Database["public"]["Enums"]["company_type"] | null
+          created_at?: string
+          enrolled_program?: Database["public"]["Enums"]["program_type"] | null
+          full_name: string
+          id?: string
+          location?: string | null
+          organization_name?: string | null
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company_type?: Database["public"]["Enums"]["company_type"] | null
+          created_at?: string
+          enrolled_program?: Database["public"]["Enums"]["program_type"] | null
+          full_name?: string
+          id?: string
+          location?: string | null
+          organization_name?: string | null
+          phone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +61,17 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      company_type:
+        | "proprietor"
+        | "partnership"
+        | "llp"
+        | "pvt_ltd"
+        | "public_ltd"
+        | "other"
+      program_type:
+        | "business_buddy"
+        | "business_catalyst_hub"
+        | "growth_challenge"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +198,20 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      company_type: [
+        "proprietor",
+        "partnership",
+        "llp",
+        "pvt_ltd",
+        "public_ltd",
+        "other",
+      ],
+      program_type: [
+        "business_buddy",
+        "business_catalyst_hub",
+        "growth_challenge",
+      ],
+    },
   },
 } as const

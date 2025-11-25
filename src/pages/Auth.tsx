@@ -1,34 +1,126 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, AlertCircle } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { z } from "zod";
+
+const signUpSchema = z.object({
+  fullName: z.string().trim().min(2, "Name must be at least 2 characters").max(100, "Name is too long"),
+  email: z.string().trim().email("Invalid email address").max(255, "Email is too long"),
+  password: z.string().min(6, "Password must be at least 6 characters").max(72, "Password is too long"),
+});
+
+const signInSchema = z.object({
+  email: z.string().trim().email("Invalid email address"),
+  password: z.string().min(1, "Password is required"),
+});
 
 const Auth = () => {
   const navigate = useNavigate();
+  const { signUp, signIn, user } = useAuth();
+  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  const [signUpData, setSignUpData] = useState({
+    fullName: "",
+    email: "",
+    password: "",
+  });
+
+  const [signInData, setSignInData] = useState({
+    email: "",
+    password: "",
+  });
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard');
+    }
+  }, [user, navigate]);
 
   const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setError(null);
+    
+    // Validate input
+    const result = signUpSchema.safeParse(signUpData);
+    if (!result.success) {
+      setError(result.error.errors[0].message);
+      return;
+    }
+
     setIsLoading(true);
-    // TODO: Implement signup logic with Supabase
-    setTimeout(() => {
+    
+    try {
+      const { error } = await signUp(
+        signUpData.email,
+        signUpData.password,
+        signUpData.fullName
+      );
+
+      if (error) {
+        if (error.message?.includes('already registered')) {
+          setError('This email is already registered. Please sign in instead.');
+        } else {
+          setError(error.message || 'Failed to create account');
+        }
+      } else {
+        toast({
+          title: "Account created!",
+          description: "Welcome to Business Growth Accelerator",
+        });
+      }
+    } catch (err: any) {
+      setError('An unexpected error occurred. Please try again.');
+      console.error('Signup error:', err);
+    } finally {
       setIsLoading(false);
-      navigate("/dashboard");
-    }, 1000);
+    }
   };
 
   const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setError(null);
+    
+    // Validate input
+    const result = signInSchema.safeParse(signInData);
+    if (!result.success) {
+      setError(result.error.errors[0].message);
+      return;
+    }
+
     setIsLoading(true);
-    // TODO: Implement signin logic with Supabase
-    setTimeout(() => {
+    
+    try {
+      const { error } = await signIn(signInData.email, signInData.password);
+
+      if (error) {
+        if (error.message?.includes('Invalid login credentials')) {
+          setError('Invalid email or password');
+        } else {
+          setError(error.message || 'Failed to sign in');
+        }
+      } else {
+        toast({
+          title: "Welcome back!",
+          description: "Successfully signed in",
+        });
+      }
+    } catch (err: any) {
+      setError('An unexpected error occurred. Please try again.');
+      console.error('Signin error:', err);
+    } finally {
       setIsLoading(false);
-      navigate("/dashboard");
-    }, 1000);
+    }
   };
 
   return (
@@ -55,7 +147,14 @@ const Auth = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="signin" className="w-full">
+            {error && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            <Tabs defaultValue="signin" className="w-full" onValueChange={() => setError(null)}>
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="signin">Sign In</TabsTrigger>
                 <TabsTrigger value="signup">Sign Up</TabsTrigger>
@@ -69,7 +168,10 @@ const Auth = () => {
                       id="signin-email"
                       type="email"
                       placeholder="name@example.com"
+                      value={signInData.email}
+                      onChange={(e) => setSignInData({ ...signInData, email: e.target.value })}
                       required
+                      disabled={isLoading}
                     />
                   </div>
                   <div className="space-y-2">
@@ -77,7 +179,10 @@ const Auth = () => {
                     <Input
                       id="signin-password"
                       type="password"
+                      value={signInData.password}
+                      onChange={(e) => setSignInData({ ...signInData, password: e.target.value })}
                       required
+                      disabled={isLoading}
                     />
                   </div>
                   <Button
@@ -98,7 +203,10 @@ const Auth = () => {
                       id="signup-name"
                       type="text"
                       placeholder="John Doe"
+                      value={signUpData.fullName}
+                      onChange={(e) => setSignUpData({ ...signUpData, fullName: e.target.value })}
                       required
+                      disabled={isLoading}
                     />
                   </div>
                   <div className="space-y-2">
@@ -107,7 +215,10 @@ const Auth = () => {
                       id="signup-email"
                       type="email"
                       placeholder="name@example.com"
+                      value={signUpData.email}
+                      onChange={(e) => setSignUpData({ ...signUpData, email: e.target.value })}
                       required
+                      disabled={isLoading}
                     />
                   </div>
                   <div className="space-y-2">
@@ -115,7 +226,11 @@ const Auth = () => {
                     <Input
                       id="signup-password"
                       type="password"
+                      placeholder="Minimum 6 characters"
+                      value={signUpData.password}
+                      onChange={(e) => setSignUpData({ ...signUpData, password: e.target.value })}
                       required
+                      disabled={isLoading}
                     />
                   </div>
                   <Button
