@@ -1,9 +1,50 @@
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { TrendingUp, Target, Calendar, Star, Zap } from "lucide-react";
+import { TrendingUp, Target, Calendar, Star, Zap, LogOut } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+
+interface Profile {
+  full_name: string;
+  organization_name?: string;
+}
 
 const Dashboard = () => {
+  const { user, signOut } = useAuth();
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('full_name, organization_name')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (error) throw error;
+        setProfile(data);
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [user]);
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
+
+  const displayName = profile?.full_name || user?.email?.split('@')[0] || 'User';
+
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto p-6 space-y-8">
@@ -11,14 +52,30 @@ const Dashboard = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-4xl font-bold">
-              Welcome Back, <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">John</span>
+              Welcome Back,{" "}
+              <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                {displayName}
+              </span>
             </h1>
-            <p className="text-muted-foreground mt-2">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+            <p className="text-muted-foreground mt-2">
+              {new Date().toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              })}
+            </p>
           </div>
-          <Badge variant="outline" className="text-lg px-4 py-2">
-            <Zap className="mr-2 h-4 w-4 text-accent" />
-            Growth Streak: <span className="font-bold ml-1">0 Days</span>
-          </Badge>
+          <div className="flex items-center gap-4">
+            <Badge variant="outline" className="text-lg px-4 py-2">
+              <Zap className="mr-2 h-4 w-4 text-accent" />
+              Growth Streak: <span className="font-bold ml-1">0 Days</span>
+            </Badge>
+            <Button variant="outline" onClick={handleSignOut}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Sign Out
+            </Button>
+          </div>
         </div>
 
         {/* Key Metrics */}
@@ -88,7 +145,9 @@ const Dashboard = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground mb-4">Start tracking your daily activities to receive personalized AI recommendations.</p>
+              <p className="text-muted-foreground mb-4">
+                Start tracking your daily activities to receive personalized AI recommendations.
+              </p>
               <Button className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90">
                 Record Today's Activities
               </Button>
