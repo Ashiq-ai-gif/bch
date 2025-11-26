@@ -1,179 +1,134 @@
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { TrendingUp, Target, Calendar, Star, Zap, LogOut } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-
-interface Profile {
-  full_name: string;
-  organization_name?: string;
-}
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { SalesVelocityChart } from "@/components/dashboard/SalesVelocityChart";
+import { GoalProgressBar } from "@/components/dashboard/GoalProgressBar";
+import { GrowthStreak } from "@/components/dashboard/GrowthStreak";
+import { AIAnalysisPanel } from "@/components/dashboard/AIAnalysisPanel";
+import { PlusCircle, BookOpen, CheckSquare, TrendingUp } from "lucide-react";
+import { format } from "date-fns";
 
 const Dashboard = () => {
   const { user, signOut } = useAuth();
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const navigate = useNavigate();
+  const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [hasGoals, setHasGoals] = useState(false);
 
   useEffect(() => {
+    if (!user) return;
+
     const fetchProfile = async () => {
-      if (!user) return;
+      const { data } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("user_id", user.id)
+        .single();
 
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('full_name, organization_name')
-          .eq('user_id', user.id)
-          .maybeSingle();
+      setProfile(data);
 
-        if (error) throw error;
-        setProfile(data);
-      } catch (error) {
-        console.error('Error fetching profile:', error);
-      } finally {
-        setLoading(false);
+      const { data: goalsData } = await supabase
+        .from("financial_goals")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+
+      if (!goalsData && data?.organization_name) {
+        navigate("/onboarding");
+        return;
       }
+
+      setHasGoals(!!goalsData);
+      setLoading(false);
     };
 
     fetchProfile();
-  }, [user]);
+  }, [user, navigate]);
 
-  const handleSignOut = async () => {
-    await signOut();
-  };
-
-  const displayName = profile?.full_name || user?.email?.split('@')[0] || 'User';
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto p-6 space-y-8">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl font-bold">
-              Welcome Back,{" "}
-              <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                {displayName}
-              </span>
-            </h1>
-            <p className="text-muted-foreground mt-2">
-              {new Date().toLocaleDateString('en-US', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              })}
-            </p>
-          </div>
-          <div className="flex items-center gap-4">
-            <Badge variant="outline" className="text-lg px-4 py-2">
-              <Zap className="mr-2 h-4 w-4 text-accent" />
-              Growth Streak: <span className="font-bold ml-1">0 Days</span>
-            </Badge>
-            <Button variant="outline" onClick={handleSignOut}>
-              <LogOut className="mr-2 h-4 w-4" />
-              Sign Out
-            </Button>
-          </div>
-        </div>
-
-        {/* Key Metrics */}
-        <div className="grid md:grid-cols-3 gap-6">
-          <Card className="border-2 hover:border-primary transition-colors">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">This Month's Target</CardTitle>
-              <Target className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">$0 / $0</div>
-              <div className="mt-2 h-2 bg-muted rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-primary to-secondary w-0" />
-              </div>
-              <p className="text-xs text-muted-foreground mt-2">0% complete</p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-2 hover:border-secondary transition-colors">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Revenue Growth</CardTitle>
-              <TrendingUp className="h-4 w-4 text-secondary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">+0%</div>
-              <p className="text-xs text-muted-foreground mt-2">vs. pre-program baseline</p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-2 hover:border-accent transition-colors">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">This Week's Score</CardTitle>
-              <Star className="h-4 w-4 text-accent" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold flex items-center">
-                <Star className="h-6 w-6 text-accent mr-1 fill-accent" />
-                <Star className="h-6 w-6 text-accent mr-1 fill-accent" />
-                <Star className="h-6 w-6 text-accent mr-1 fill-accent" />
-                <Star className="h-6 w-6 text-muted mr-1" />
-                <Star className="h-6 w-6 text-muted mr-1" />
-              </div>
-              <p className="text-xs text-muted-foreground mt-2">Based on AI analysis</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Sales Velocity Chart Placeholder */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Sales Velocity</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64 flex items-center justify-center bg-muted/30 rounded-lg">
-              <p className="text-muted-foreground">Chart will appear here once you start tracking</p>
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted">
+      <header className="border-b bg-background/95 backdrop-blur">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl font-bold">Welcome back, {profile?.full_name}!</h1>
+              <p className="text-sm text-muted-foreground">{format(new Date(), "EEEE, MMMM d, yyyy")}</p>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* AI Insights */}
-        <div className="grid md:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Calendar className="mr-2 h-5 w-5 text-primary" />
-                Daily Action Plan
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground mb-4">
-                Start tracking your daily activities to receive personalized AI recommendations.
-              </p>
-              <Button className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90">
-                Record Today's Activities
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => navigate("/daily-input")}>
+                <PlusCircle className="w-4 h-4 mr-2" />Daily Input
               </Button>
-            </CardContent>
-          </Card>
+              <Button variant="ghost" onClick={signOut}>Sign Out</Button>
+            </div>
+          </div>
+        </div>
+      </header>
 
+      <main className="container mx-auto px-4 py-8 space-y-8">
+        {!hasGoals ? (
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center">
-                <Target className="mr-2 h-5 w-5 text-secondary" />
-                AI Growth Suggestions
-              </CardTitle>
+              <CardTitle>Complete Your Setup</CardTitle>
+              <CardDescription>Set up your financial goals to unlock AI insights</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                <div className="p-3 bg-muted/50 rounded-lg">
-                  <p className="text-sm">Complete your business profile to unlock personalized insights</p>
-                </div>
-                <div className="p-3 bg-muted/50 rounded-lg">
-                  <p className="text-sm">Set your financial goals to activate tracking</p>
-                </div>
-              </div>
+              <Button onClick={() => navigate("/onboarding")}>Complete Onboarding</Button>
             </CardContent>
           </Card>
-        </div>
-      </div>
+        ) : (
+          <>
+            <GrowthStreak />
+            <div className="grid md:grid-cols-2 gap-6">
+              <SalesVelocityChart />
+              <GoalProgressBar />
+            </div>
+            <AIAnalysisPanel />
+            <div className="grid md:grid-cols-3 gap-4">
+              <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate("/daily-input?tab=learning")}>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <BookOpen className="w-5 h-5" />Today's Learning
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">Log what you learned and how you'll apply it</p>
+                </CardContent>
+              </Card>
+              <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate("/daily-input?tab=habits")}>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <CheckSquare className="w-5 h-5" />Habits & Tasks
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">Track your daily habits and complete tasks</p>
+                </CardContent>
+              </Card>
+              <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate("/daily-input?tab=business")}>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <TrendingUp className="w-5 h-5" />Business Metrics
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">Record today's revenue and business performance</p>
+                </CardContent>
+              </Card>
+            </div>
+          </>
+        )}
+      </main>
     </div>
   );
 };

@@ -14,6 +14,246 @@ export type Database = {
   }
   public: {
     Tables: {
+      achievements: {
+        Row: {
+          badge_description: string | null
+          badge_name: string
+          earned_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          badge_description?: string | null
+          badge_name: string
+          earned_at?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          badge_description?: string | null
+          badge_name?: string
+          earned_at?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ai_reports: {
+        Row: {
+          actions_report: string | null
+          created_at: string | null
+          end_date: string
+          growth_suggestions: string | null
+          habit_report: string | null
+          id: string
+          learning_report: string | null
+          performance_rating: number | null
+          report_period: Database["public"]["Enums"]["timeline_period"]
+          results_report: string | null
+          start_date: string
+          user_id: string
+        }
+        Insert: {
+          actions_report?: string | null
+          created_at?: string | null
+          end_date: string
+          growth_suggestions?: string | null
+          habit_report?: string | null
+          id?: string
+          learning_report?: string | null
+          performance_rating?: number | null
+          report_period: Database["public"]["Enums"]["timeline_period"]
+          results_report?: string | null
+          start_date: string
+          user_id: string
+        }
+        Update: {
+          actions_report?: string | null
+          created_at?: string | null
+          end_date?: string
+          growth_suggestions?: string | null
+          habit_report?: string | null
+          id?: string
+          learning_report?: string | null
+          performance_rating?: number | null
+          report_period?: Database["public"]["Enums"]["timeline_period"]
+          results_report?: string | null
+          start_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      daily_business_logs: {
+        Row: {
+          ai_prediction: string | null
+          created_at: string | null
+          gross_profit: number
+          id: string
+          log_date: string
+          revenue: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          ai_prediction?: string | null
+          created_at?: string | null
+          gross_profit?: number
+          id?: string
+          log_date?: string
+          revenue?: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          ai_prediction?: string | null
+          created_at?: string | null
+          gross_profit?: number
+          id?: string
+          log_date?: string
+          revenue?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      daily_habits: {
+        Row: {
+          created_at: string | null
+          id: string
+          log_date: string
+          most_important_action: string | null
+          updated_at: string | null
+          user_id: string
+          wake_up_time: string | null
+          what_to_improve: string | null
+          what_went_well: string | null
+          what_went_wrong: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          log_date?: string
+          most_important_action?: string | null
+          updated_at?: string | null
+          user_id: string
+          wake_up_time?: string | null
+          what_to_improve?: string | null
+          what_went_well?: string | null
+          what_went_wrong?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          log_date?: string
+          most_important_action?: string | null
+          updated_at?: string | null
+          user_id?: string
+          wake_up_time?: string | null
+          what_to_improve?: string | null
+          what_went_well?: string | null
+          what_went_wrong?: string | null
+        }
+        Relationships: []
+      }
+      daily_learning: {
+        Row: {
+          ai_suggestions: string | null
+          created_at: string | null
+          id: string
+          implementation_plan: string
+          learning_point: string
+          log_date: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          ai_suggestions?: string | null
+          created_at?: string | null
+          id?: string
+          implementation_plan: string
+          learning_point: string
+          log_date?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          ai_suggestions?: string | null
+          created_at?: string | null
+          id?: string
+          implementation_plan?: string
+          learning_point?: string
+          log_date?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      financial_goals: {
+        Row: {
+          baseline_monthly_revenue: number
+          created_at: string | null
+          five_year_target: number
+          id: string
+          updated_at: string | null
+          user_id: string
+          year_1_target: number
+          year_2_target: number
+          year_3_target: number
+          year_4_target: number
+        }
+        Insert: {
+          baseline_monthly_revenue: number
+          created_at?: string | null
+          five_year_target: number
+          id?: string
+          updated_at?: string | null
+          user_id: string
+          year_1_target: number
+          year_2_target: number
+          year_3_target: number
+          year_4_target: number
+        }
+        Update: {
+          baseline_monthly_revenue?: number
+          created_at?: string | null
+          five_year_target?: number
+          id?: string
+          updated_at?: string | null
+          user_id?: string
+          year_1_target?: number
+          year_2_target?: number
+          year_3_target?: number
+          year_4_target?: number
+        }
+        Relationships: []
+      }
+      monthly_targets: {
+        Row: {
+          created_at: string | null
+          id: string
+          month: number
+          target_revenue: number
+          user_id: string
+          year: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          month: number
+          target_revenue: number
+          user_id: string
+          year: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          month?: number
+          target_revenue?: number
+          user_id?: string
+          year?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           company_type: Database["public"]["Enums"]["company_type"] | null
@@ -53,6 +293,47 @@ export type Database = {
         }
         Relationships: []
       }
+      todo_items: {
+        Row: {
+          completed: boolean | null
+          created_at: string | null
+          daily_habit_id: string
+          id: string
+          is_ai_generated: boolean | null
+          priority: number | null
+          task_description: string
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean | null
+          created_at?: string | null
+          daily_habit_id: string
+          id?: string
+          is_ai_generated?: boolean | null
+          priority?: number | null
+          task_description: string
+          user_id: string
+        }
+        Update: {
+          completed?: boolean | null
+          created_at?: string | null
+          daily_habit_id?: string
+          id?: string
+          is_ai_generated?: boolean | null
+          priority?: number | null
+          task_description?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "todo_items_daily_habit_id_fkey"
+            columns: ["daily_habit_id"]
+            isOneToOne: false
+            referencedRelation: "daily_habits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -68,10 +349,22 @@ export type Database = {
         | "pvt_ltd"
         | "public_ltd"
         | "other"
+      habit_category:
+        | "morning_routine"
+        | "sales_activity"
+        | "learning"
+        | "health"
+        | "other"
       program_type:
         | "business_buddy"
         | "business_catalyst_hub"
         | "growth_challenge"
+      timeline_period:
+        | "weekly"
+        | "monthly"
+        | "yearly"
+        | "two_year"
+        | "five_year"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -207,11 +500,19 @@ export const Constants = {
         "public_ltd",
         "other",
       ],
+      habit_category: [
+        "morning_routine",
+        "sales_activity",
+        "learning",
+        "health",
+        "other",
+      ],
       program_type: [
         "business_buddy",
         "business_catalyst_hub",
         "growth_challenge",
       ],
+      timeline_period: ["weekly", "monthly", "yearly", "two_year", "five_year"],
     },
   },
 } as const
