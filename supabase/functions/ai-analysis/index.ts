@@ -146,13 +146,13 @@ LEARNING DATA (${learnings.length} entries):
 ${learnings.slice(0, 5).map(l => `- Date: ${l.log_date}, Learning: ${l.learning_point?.substring(0, 100) || 'N/A'}, Implementation: ${l.implementation_plan?.substring(0, 100) || 'N/A'}`).join('\n')}
 
 BUSINESS DATA (${businessLogs.length} entries):
-- Total Revenue: $${totalRevenue.toFixed(2)}
-- Average Daily Revenue: $${avgDailyRevenue.toFixed(2)}
-- Total Gross Profit: $${totalProfit.toFixed(2)}
-${businessLogs.slice(0, 5).map(b => `- Date: ${b.log_date}, Revenue: $${b.revenue}, Profit: $${b.gross_profit}`).join('\n')}
+- Total Revenue: ₹${totalRevenue.toFixed(2)}
+- Average Daily Revenue: ₹${avgDailyRevenue.toFixed(2)}
+- Total Gross Profit: ₹${totalProfit.toFixed(2)}
+${businessLogs.slice(0, 5).map(b => `- Date: ${b.log_date}, Revenue: ₹${b.revenue}, Profit: ₹${b.gross_profit}`).join('\n')}
 
 GOALS:
-${goals ? `- Year 1 Target: $${goals.year_1_target}, 5-Year Target: $${goals.five_year_target}, Baseline: $${goals.baseline_monthly_revenue}/month` : 'No goals set'}
+${goals ? `- Year 1 Target: ₹${goals.year_1_target}, 5-Year Target: ₹${goals.five_year_target}, Baseline: ₹${goals.baseline_monthly_revenue}/month` : 'No goals set'}
 
 METRICS:
 - Habit Completion Rate: ${habitCompletionRate.toFixed(0)}%
@@ -228,7 +228,7 @@ Be direct, data-driven, and actionable. Reference specific dates, numbers, or en
         habitReport: `You've logged ${habits.length} habit entries with ${habitCompletionRate.toFixed(0)}% completion rate.`,
         learningReport: `You've recorded ${learnings.length} learning points with ${learningRate.toFixed(0)}% having implementation plans.`,
         actionsReport: `Your most recent action: ${habits[0]?.most_important_action || 'None recorded yet'}`,
-        resultsReport: `Total revenue this period: $${totalRevenue.toFixed(2)}, averaging $${avgDailyRevenue.toFixed(2)}/day.`,
+        resultsReport: `Total revenue this period: ₹${totalRevenue.toFixed(2)}, averaging ₹${avgDailyRevenue.toFixed(2)}/day.`,
         performanceRating: Math.min(5, Math.ceil((habitCompletionRate + learningRate) / 40)),
         suggestions: [
           habits.length < 3 ? "Log your habits more consistently" : "Maintain your habit logging streak",
