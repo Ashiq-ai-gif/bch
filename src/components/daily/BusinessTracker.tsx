@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { TrendingUp, DollarSign } from "lucide-react";
+import { TrendingUp, IndianRupee } from "lucide-react";
 import { format } from "date-fns";
 
 export const BusinessTracker = () => {
@@ -93,10 +93,10 @@ export const BusinessTracker = () => {
     if (monthlyTarget > 0) {
       const percentageOfTarget = (projectedRevenue / monthlyTarget) * 100;
       if (percentageOfTarget >= 100) {
-        prediction = `On track to exceed target by ${(percentageOfTarget - 100).toFixed(1)}%! Projected: $${projectedRevenue.toFixed(2)}`;
+        prediction = `On track to exceed target by ${(percentageOfTarget - 100).toFixed(1)}%! Projected: ₹${projectedRevenue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
       } else {
         const dailyNeeded = (monthlyTarget - totalWithToday) / (daysInMonth - currentDay);
-        prediction = `Currently at ${percentageOfTarget.toFixed(1)}% of target. Need $${dailyNeeded.toFixed(2)}/day to hit goal.`;
+        prediction = `Currently at ${percentageOfTarget.toFixed(1)}% of target. Need ₹${dailyNeeded.toLocaleString('en-IN', { maximumFractionDigits: 0 })}/day to hit goal.`;
       }
     }
 
@@ -141,33 +141,33 @@ export const BusinessTracker = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Monthly Target</p>
-                <p className="text-2xl font-bold">${monthlyTarget.toLocaleString()}</p>
+                <p className="text-2xl font-bold">₹{monthlyTarget.toLocaleString('en-IN')}</p>
               </div>
-              <DollarSign className="w-8 h-8 text-primary" />
+              <IndianRupee className="w-8 h-8 text-primary" />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="revenue">Today's Revenue / Turnover ($) *</Label>
+            <Label htmlFor="revenue">Today's Revenue / Turnover (₹) *</Label>
             <Input
               id="revenue"
               type="number"
               step="0.01"
               value={data.revenue}
               onChange={(e) => setData({ ...data, revenue: e.target.value })}
-              placeholder="0.00"
+              placeholder="0"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="profit">Today's Gross Profit ($)</Label>
+            <Label htmlFor="profit">Today's Gross Profit (₹)</Label>
             <Input
               id="profit"
               type="number"
               step="0.01"
               value={data.gross_profit}
               onChange={(e) => setData({ ...data, gross_profit: e.target.value })}
-              placeholder="0.00"
+              placeholder="0"
             />
           </div>
 

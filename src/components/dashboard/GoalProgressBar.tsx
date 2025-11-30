@@ -4,6 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { Target } from "lucide-react";
 
 type TimelinePeriod = "month" | "year" | "2year" | "3year" | "4year" | "5year";
 
@@ -13,6 +14,7 @@ export const GoalProgressBar = () => {
   const [target, setTarget] = useState(0);
   const [actual, setActual] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [hasGoals, setHasGoals] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -28,13 +30,15 @@ export const GoalProgressBar = () => {
         .from("financial_goals")
         .select("*")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
 
       if (!goalsData) {
+        setHasGoals(false);
         setLoading(false);
         return;
       }
 
+      setHasGoals(true);
       let targetAmount = 0;
 
       // Determine target based on selected period
@@ -46,7 +50,7 @@ export const GoalProgressBar = () => {
             .eq("user_id", user.id)
             .eq("year", currentYear)
             .eq("month", currentMonth)
-            .single();
+            .maybeSingle();
           targetAmount = Number(monthlyData?.target_revenue || 0);
           break;
         case "year":
@@ -94,12 +98,17 @@ export const GoalProgressBar = () => {
   const percentage = target > 0 ? Math.min((actual / target) * 100, 100) : 0;
   const remaining = Math.max(target - actual, 0);
 
+  const formatCurrency = (value: number) => `₹${value.toLocaleString('en-IN')}`;
+
   return (
     <Card>
       <CardHeader>
         <div className="flex justify-between items-start">
           <div>
-            <CardTitle>Goal Progress</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="w-5 h-5" />
+              Goal Progress
+            </CardTitle>
             <CardDescription>Track your revenue targets</CardDescription>
           </div>
           <Select value={period} onValueChange={(value) => setPeriod(value as TimelinePeriod)}>
@@ -120,17 +129,22 @@ export const GoalProgressBar = () => {
       <CardContent className="space-y-4">
         {loading ? (
           <p className="text-muted-foreground">Loading...</p>
+        ) : !hasGoals ? (
+          <div className="text-center py-4 text-muted-foreground">
+            <p>No financial goals set yet</p>
+            <p className="text-sm">Complete onboarding to set your revenue targets</p>
+          </div>
         ) : (
           <>
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="font-medium">Current: ${actual.toLocaleString()}</span>
-                <span className="font-medium">Target: ${target.toLocaleString()}</span>
+                <span className="font-medium">Current: {formatCurrency(actual)}</span>
+                <span className="font-medium">Target: {formatCurrency(target)}</span>
               </div>
               <Progress value={percentage} className="h-4" />
               <div className="flex justify-between text-sm text-muted-foreground">
                 <span>{percentage.toFixed(1)}% Complete</span>
-                <span>${remaining.toLocaleString()} remaining</span>
+                <span>{formatCurrency(remaining)} remaining</span>
               </div>
             </div>
           </>

@@ -222,7 +222,7 @@ const Onboarding = () => {
                   id="phone"
                   value={profile.phone}
                   onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                  placeholder="+1 (555) 123-4567"
+                  placeholder="+91 98765 43210"
                 />
               </div>
 
@@ -232,7 +232,7 @@ const Onboarding = () => {
                   id="location"
                   value={profile.location}
                   onChange={(e) => setProfile({ ...profile, location: e.target.value })}
-                  placeholder="City, State, Country"
+                  placeholder="City, State, India"
                 />
               </div>
 
@@ -321,30 +321,30 @@ const Onboarding = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="baseline">Baseline: Average Monthly Revenue Before Program ($) *</Label>
+                <Label htmlFor="baseline">Baseline: Average Monthly Revenue Before Program (₹) *</Label>
                 <Input
                   id="baseline"
                   type="number"
                   value={financialGoals.baseline_monthly_revenue}
                   onChange={(e) => setFinancialGoals({ ...financialGoals, baseline_monthly_revenue: e.target.value })}
-                  placeholder="e.g., 50000"
+                  placeholder="e.g., 500000"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="year5">Total Revenue Goal in 5 Years ($) *</Label>
+                <Label htmlFor="year5">Total Revenue Goal in 5 Years (₹) *</Label>
                 <Input
                   id="year5"
                   type="number"
                   value={financialGoals.five_year_target}
                   onChange={(e) => setFinancialGoals({ ...financialGoals, five_year_target: e.target.value })}
-                  placeholder="e.g., 10000000"
+                  placeholder="e.g., 100000000"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="year4">Year 4 Target ($) *</Label>
+                  <Label htmlFor="year4">Year 4 Target (₹) *</Label>
                   <Input
                     id="year4"
                     type="number"
@@ -354,7 +354,7 @@ const Onboarding = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="year3">Year 3 Target ($) *</Label>
+                  <Label htmlFor="year3">Year 3 Target (₹) *</Label>
                   <Input
                     id="year3"
                     type="number"
@@ -364,7 +364,7 @@ const Onboarding = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="year2">Year 2 Target ($) *</Label>
+                  <Label htmlFor="year2">Year 2 Target (₹) *</Label>
                   <Input
                     id="year2"
                     type="number"
@@ -374,7 +374,7 @@ const Onboarding = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="year1">Year 1 Target ($) *</Label>
+                  <Label htmlFor="year1">Year 1 Target (₹) *</Label>
                   <Input
                     id="year1"
                     type="number"
@@ -401,14 +401,14 @@ const Onboarding = () => {
             <CardHeader>
               <CardTitle>Monthly Breakdown - Year 1</CardTitle>
               <CardDescription>
-                Break down your Year 1 target (${financialGoals.year_1_target}) into monthly goals
+                Break down your Year 1 target (₹{Number(financialGoals.year_1_target || 0).toLocaleString('en-IN')}) into monthly goals
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {MONTHS.map((month, index) => (
                   <div key={month} className="space-y-2">
-                    <Label htmlFor={`month-${index + 1}`}>{month} *</Label>
+                    <Label htmlFor={`month-${index + 1}`}>{month} (₹) *</Label>
                     <Input
                       id={`month-${index + 1}`}
                       type="number"
