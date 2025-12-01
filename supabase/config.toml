@@ -2,3 +2,6 @@ project_id = "hqzeyqmhznnywazkfuol"
 
 [functions.ai-analysis]
 verify_jwt = false
+
+[functions.admin-user-summary]
+verify_jwt = true

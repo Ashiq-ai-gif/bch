@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAdminCheck } from "@/hooks/useAdminCheck";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,11 +9,12 @@ import { SalesVelocityChart } from "@/components/dashboard/SalesVelocityChart";
 import { GoalProgressBar } from "@/components/dashboard/GoalProgressBar";
 import { GrowthStreak } from "@/components/dashboard/GrowthStreak";
 import { AIAnalysisPanel } from "@/components/dashboard/AIAnalysisPanel";
-import { PlusCircle, BookOpen, CheckSquare, TrendingUp } from "lucide-react";
+import { PlusCircle, BookOpen, CheckSquare, TrendingUp, Shield } from "lucide-react";
 import { format } from "date-fns";
 
 const Dashboard = () => {
   const { user, signOut } = useAuth();
+  const { isAdmin } = useAdminCheck();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -66,6 +68,11 @@ const Dashboard = () => {
               <p className="text-sm text-muted-foreground">{format(new Date(), "EEEE, MMMM d, yyyy")}</p>
             </div>
             <div className="flex gap-2">
+              {isAdmin && (
+                <Button variant="outline" onClick={() => navigate("/admin")}>
+                  <Shield className="w-4 h-4 mr-2" />Admin
+                </Button>
+              )}
               <Button variant="outline" onClick={() => navigate("/daily-input")}>
                 <PlusCircle className="w-4 h-4 mr-2" />Daily Input
               </Button>
