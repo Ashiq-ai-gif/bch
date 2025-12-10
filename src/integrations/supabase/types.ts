@@ -227,6 +227,45 @@ export type Database = {
         }
         Relationships: []
       }
+      growth_method_logs: {
+        Row: {
+          created_at: string | null
+          day_of_week: string
+          day_priority: string
+          id: string
+          log_date: string
+          marketing_notes: string | null
+          priority_description: string | null
+          sales_notes: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          day_of_week: string
+          day_priority: string
+          id?: string
+          log_date?: string
+          marketing_notes?: string | null
+          priority_description?: string | null
+          sales_notes?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          day_of_week?: string
+          day_priority?: string
+          id?: string
+          log_date?: string
+          marketing_notes?: string | null
+          priority_description?: string | null
+          sales_notes?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       monthly_targets: {
         Row: {
           created_at: string | null
