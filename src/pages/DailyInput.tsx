@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft } from "lucide-react";
 import { LearningTracker } from "@/components/daily/LearningTracker";
 import { HabitTracker } from "@/components/daily/HabitTracker";
+import { GrowthMethodTracker } from "@/components/daily/GrowthMethodTracker";
 import { BusinessTracker } from "@/components/daily/BusinessTracker";
 
 const DailyInput = () => {
@@ -40,9 +41,10 @@ const DailyInput = () => {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 max-w-md mx-auto mb-8">
+          <TabsList className="grid w-full grid-cols-4 max-w-lg mx-auto mb-8">
             <TabsTrigger value="learning">Learning</TabsTrigger>
-            <TabsTrigger value="habits">Habits & Tasks</TabsTrigger>
+            <TabsTrigger value="habits">Habits</TabsTrigger>
+            <TabsTrigger value="growth">Growth</TabsTrigger>
             <TabsTrigger value="business">Business</TabsTrigger>
           </TabsList>
 
@@ -52,6 +54,10 @@ const DailyInput = () => {
 
           <TabsContent value="habits">
             <HabitTracker />
+          </TabsContent>
+
+          <TabsContent value="growth">
+            <GrowthMethodTracker />
           </TabsContent>
 
           <TabsContent value="business">
