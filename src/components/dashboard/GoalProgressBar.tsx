@@ -8,8 +8,9 @@ import { Target } from "lucide-react";
 
 type TimelinePeriod = "month" | "year" | "2year" | "3year" | "4year" | "5year";
 
-export const GoalProgressBar = () => {
+export const GoalProgressBar = ({ userId }: { userId?: string }) => {
   const { user } = useAuth();
+  const effectiveUserId = userId || user?.id;
   const [period, setPeriod] = useState<TimelinePeriod>("month");
   const [target, setTarget] = useState(0);
   const [actual, setActual] = useState(0);
@@ -17,7 +18,7 @@ export const GoalProgressBar = () => {
   const [hasGoals, setHasGoals] = useState(false);
 
   useEffect(() => {
-    if (!user) return;
+    if (!effectiveUserId) return;
 
     const fetchProgress = async () => {
       setLoading(true);
@@ -29,7 +30,7 @@ export const GoalProgressBar = () => {
       const { data: goalsData } = await supabase
         .from("financial_goals")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", effectiveUserId)
         .maybeSingle();
 
       if (!goalsData) {
@@ -47,7 +48,7 @@ export const GoalProgressBar = () => {
           const { data: monthlyData } = await supabase
             .from("monthly_targets")
             .select("target_revenue")
-            .eq("user_id", user.id)
+            .eq("user_id", effectiveUserId)
             .eq("year", currentYear)
             .eq("month", currentMonth)
             .maybeSingle();
@@ -83,7 +84,7 @@ export const GoalProgressBar = () => {
       const { data: salesData } = await supabase
         .from("daily_business_logs")
         .select("revenue")
-        .eq("user_id", user.id)
+        .eq("user_id", effectiveUserId)
         .gte("log_date", startDate);
 
       const totalRevenue = salesData?.reduce((sum, item) => sum + Number(item.revenue), 0) || 0;

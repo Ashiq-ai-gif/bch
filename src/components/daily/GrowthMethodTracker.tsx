@@ -6,8 +6,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
+import { toast as sonnerToast } from "sonner"; // Renamed to avoid conflict
 import { Loader2, Users, UserCheck, UserPlus, Heart, ClipboardCheck, Lightbulb, Megaphone, TrendingUp } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast"; // Added
+import { format } from "date-fns"; // Added
 
 const DAY_PRIORITIES: Record<number, { name: string; description: string; icon: React.ReactNode }> = {
   0: { name: "Reflection Day", description: "Reflect on your week's performance and plan for the next", icon: <Lightbulb className="w-5 h-5" /> },
@@ -19,7 +21,11 @@ const DAY_PRIORITIES: Record<number, { name: string; description: string; icon: 
   6: { name: "Review Day", description: "Review your week's results and analyze performance", icon: <ClipboardCheck className="w-5 h-5" /> },
 };
 
-export const GrowthMethodTracker = () => {
+interface GrowthTrackerProps {
+  date: string;
+}
+
+export const GrowthMethodTracker = ({ date }: GrowthTrackerProps) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -29,22 +35,20 @@ export const GrowthMethodTracker = () => {
   const [salesNotes, setSalesNotes] = useState("");
   const [existingId, setExistingId] = useState<string | null>(null);
 
-  const today = new Date();
-  const dayOfWeek = today.getDay();
+  const dayOfWeek = new Date(date).getDay();
   const todayPriority = DAY_PRIORITIES[dayOfWeek];
-  const dayName = today.toLocaleDateString('en-US', { weekday: 'long' });
+  const dayName = format(new Date(date), "EEEE");
 
   useEffect(() => {
     const fetchData = async () => {
       if (!user) return;
 
       try {
-        const todayDate = today.toISOString().split('T')[0];
         const { data, error } = await supabase
           .from('growth_method_logs')
           .select('*')
           .eq('user_id', user.id)
-          .eq('log_date', todayDate)
+          .eq('log_date', date)
           .maybeSingle();
 
         if (error) throw error;
@@ -54,56 +58,52 @@ export const GrowthMethodTracker = () => {
           setPriorityDescription(data.priority_description || "");
           setMarketingNotes(data.marketing_notes || "");
           setSalesNotes(data.sales_notes || "");
+        } else {
+          // Reset form if no data for this date
+          setExistingId(null);
+          setPriorityDescription("");
+          setMarketingNotes("");
+          setSalesNotes("");
         }
       } catch (error) {
         console.error('Error fetching growth method data:', error);
-        toast.error("Failed to load growth method data");
+        sonnerToast.error("Failed to load growth method data");
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, [user]);
+  }, [user, date]);
 
   const handleSave = async () => {
     if (!user) return;
 
     setSaving(true);
     try {
-      const todayDate = today.toISOString().split('T')[0];
       const payload = {
         user_id: user.id,
-        log_date: todayDate,
-        day_of_week: dayName,
+        log_date: date,
+        day_of_week: format(new Date(date), "EEEE"),
         day_priority: todayPriority.name,
         priority_description: priorityDescription,
         marketing_notes: marketingNotes,
         sales_notes: salesNotes,
       };
 
-      if (existingId) {
-        const { error } = await supabase
-          .from('growth_method_logs')
-          .update(payload)
-          .eq('id', existingId);
-        
-        if (error) throw error;
-      } else {
-        const { data, error } = await supabase
-          .from('growth_method_logs')
-          .insert(payload)
-          .select()
-          .single();
-        
-        if (error) throw error;
-        setExistingId(data.id);
-      }
+      const { error } = await supabase
+        .from('growth_method_logs')
+        .upsert({
+          ...payload,
+          id: existingId || undefined
+        }, { onConflict: 'user_id,log_date' });
 
-      toast.success("Growth method log saved successfully!");
+      if (error) throw error;
+
+      sonnerToast.success("Growth method log saved successfully!");
     } catch (error) {
       console.error('Error saving growth method data:', error);
-      toast.error("Failed to save growth method data");
+      sonnerToast.error("Failed to save growth method data");
     } finally {
       setSaving(false);
     }

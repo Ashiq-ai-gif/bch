@@ -9,26 +9,36 @@ import { useToast } from "@/hooks/use-toast";
 import { TrendingUp, IndianRupee } from "lucide-react";
 import { format } from "date-fns";
 
-export const BusinessTracker = () => {
+interface BusinessTrackerProps {
+  date: string;
+}
+
+export const BusinessTracker = ({ date }: BusinessTrackerProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [monthlyTarget, setMonthlyTarget] = useState(0);
+  const [monthlyTarget, setMonthlyTarget] = useState(0); // Keep for display, but prediction logic removed from handleSave
   const [data, setData] = useState({
     revenue: "",
     gross_profit: "",
     ai_prediction: "",
   });
 
-  const today = format(new Date(), "yyyy-MM-dd");
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
 
   useEffect(() => {
     if (!user) return;
 
+    // Reset data when date changes
+    setData({
+      revenue: "",
+      gross_profit: "",
+      ai_prediction: "",
+    });
+
     const fetchData = async () => {
-      // Fetch monthly target
+      // Fetch monthly target (still needed for display)
       const { data: targetData } = await supabase
         .from("monthly_targets")
         .select("target_revenue")
@@ -39,33 +49,35 @@ export const BusinessTracker = () => {
 
       if (targetData) {
         setMonthlyTarget(Number(targetData.target_revenue));
+      } else {
+        setMonthlyTarget(0); // Reset if no target found for the current month
       }
 
-      // Fetch today's data
-      const { data: businessData } = await supabase
+      // Fetch data for the given date
+      const { data: log } = await supabase
         .from("daily_business_logs")
         .select("*")
         .eq("user_id", user.id)
-        .eq("log_date", today)
+        .eq("log_date", date)
         .maybeSingle();
 
-      if (businessData) {
+      if (log) {
         setData({
-          revenue: businessData.revenue.toString(),
-          gross_profit: businessData.gross_profit.toString(),
-          ai_prediction: businessData.ai_prediction || "",
+          revenue: log.revenue.toString(),
+          gross_profit: log.gross_profit.toString(),
+          ai_prediction: log.ai_prediction || "",
         });
       }
     };
 
     fetchData();
-  }, [user, today, currentYear, currentMonth]);
+  }, [user, date, currentYear, currentMonth]); // Keep currentYear/Month for monthly target fetch
 
   const handleSave = async () => {
     if (!user || !data.revenue.trim()) {
       toast({
         title: "Missing Information",
-        description: "Please enter today's revenue",
+        description: "Please enter revenue",
         variant: "destructive",
       });
       return;
@@ -74,19 +86,20 @@ export const BusinessTracker = () => {
     setLoading(true);
 
     // Get month-to-date revenue for prediction
+    // Note: We use 'date' (the selected date) effectively as 'today' for the context of this entry
     const startOfMonth = `${currentYear}-${String(currentMonth).padStart(2, "0")}-01`;
     const { data: monthData } = await supabase
       .from("daily_business_logs")
       .select("revenue")
       .eq("user_id", user.id)
       .gte("log_date", startOfMonth)
-      .lt("log_date", today);
+      .lt("log_date", date);
 
     const monthToDateRevenue = monthData?.reduce((sum, item) => sum + Number(item.revenue), 0) || 0;
     const totalWithToday = monthToDateRevenue + parseFloat(data.revenue);
-    
+
     const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
-    const currentDay = new Date().getDate();
+    const currentDay = parseInt(date.split('-')[2], 10);
     const projectedRevenue = (totalWithToday / currentDay) * daysInMonth;
 
     let prediction = "";
@@ -95,19 +108,33 @@ export const BusinessTracker = () => {
       if (percentageOfTarget >= 100) {
         prediction = `On track to exceed target by ${(percentageOfTarget - 100).toFixed(1)}%! Projected: ₹${projectedRevenue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
       } else {
-        const dailyNeeded = (monthlyTarget - totalWithToday) / (daysInMonth - currentDay);
+        const remainingDays = Math.max(0, daysInMonth - currentDay);
+        const dailyNeeded = remainingDays > 0 ? (monthlyTarget - totalWithToday) / remainingDays : 0;
         prediction = `Currently at ${percentageOfTarget.toFixed(1)}% of target. Need ₹${dailyNeeded.toLocaleString('en-IN', { maximumFractionDigits: 0 })}/day to hit goal.`;
       }
+    }
+
+    let aiSummary = "";
+    try {
+      const { data: summaryData, error: summaryError } = await supabase.functions.invoke('generate-daily-summary', {
+        body: { category: 'business', data: { revenue: data.revenue, gross_profit: data.gross_profit || "0" } }
+      });
+      if (!summaryError && summaryData?.summary) {
+        aiSummary = summaryData.summary;
+      }
+    } catch (e) {
+      console.error("Failed to generate summary", e);
     }
 
     const { error } = await supabase
       .from("daily_business_logs")
       .upsert({
         user_id: user.id,
-        log_date: today,
+        log_date: date,
         revenue: parseFloat(data.revenue),
         gross_profit: parseFloat(data.gross_profit || "0"),
         ai_prediction: prediction,
+        ai_summary: aiSummary, // Save summary
       }, {
         onConflict: "user_id,log_date",
       });
@@ -126,6 +153,9 @@ export const BusinessTracker = () => {
         title: "Success",
         description: "Business metrics saved successfully",
       });
+
+      // Background update of user persona
+      supabase.functions.invoke('update-user-persona').catch(console.error);
     }
   };
 

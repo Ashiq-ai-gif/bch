@@ -9,7 +9,11 @@ import { useToast } from "@/hooks/use-toast";
 import { Sparkles } from "lucide-react";
 import { format } from "date-fns";
 
-export const LearningTracker = () => {
+interface LearningTrackerProps {
+  date: string;
+}
+
+export const LearningTracker = ({ date }: LearningTrackerProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -20,17 +24,22 @@ export const LearningTracker = () => {
     ai_suggestions: "",
   });
 
-  const today = format(new Date(), "yyyy-MM-dd");
-
   useEffect(() => {
     if (!user) return;
+
+    // Reset data on date change
+    setData({
+      learning_point: "",
+      implementation_plan: "",
+      ai_suggestions: "",
+    });
 
     const fetchTodayData = async () => {
       const { data: existingData } = await supabase
         .from("daily_learning")
         .select("*")
         .eq("user_id", user.id)
-        .eq("log_date", today)
+        .eq("log_date", date)
         .maybeSingle();
 
       if (existingData) {
@@ -43,7 +52,7 @@ export const LearningTracker = () => {
     };
 
     fetchTodayData();
-  }, [user, today]);
+  }, [user, date]);
 
   const handleGetAISuggestions = async () => {
     if (!data.learning_point.trim()) {
@@ -87,7 +96,7 @@ export const LearningTracker = () => {
       .from("daily_learning")
       .upsert({
         user_id: user.id,
-        log_date: today,
+        log_date: date,
         ...data,
       }, {
         onConflict: "user_id,log_date",

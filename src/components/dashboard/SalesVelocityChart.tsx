@@ -12,21 +12,22 @@ interface SalesData {
   baseline: number;
 }
 
-export const SalesVelocityChart = () => {
+export const SalesVelocityChart = ({ userId }: { userId?: string }) => {
   const { user } = useAuth();
+  const effectiveUserId = userId || user?.id;
   const [data, setData] = useState<SalesData[]>([]);
   const [baseline, setBaseline] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
+    if (!effectiveUserId) return;
 
     const fetchData = async () => {
       // Fetch baseline
       const { data: goalsData } = await supabase
         .from("financial_goals")
         .select("baseline_monthly_revenue")
-        .eq("user_id", user.id)
+        .eq("user_id", effectiveUserId)
         .maybeSingle();
 
       const baselineValue = goalsData?.baseline_monthly_revenue || 0;
@@ -37,7 +38,7 @@ export const SalesVelocityChart = () => {
       const { data: salesData } = await supabase
         .from("daily_business_logs")
         .select("log_date, revenue")
-        .eq("user_id", user.id)
+        .eq("user_id", effectiveUserId)
         .gte("log_date", thirtyDaysAgo)
         .order("log_date", { ascending: true });
 
@@ -54,7 +55,7 @@ export const SalesVelocityChart = () => {
     };
 
     fetchData();
-  }, [user]);
+  }, [effectiveUserId]);
 
   if (loading) {
     return (
@@ -77,7 +78,7 @@ export const SalesVelocityChart = () => {
           Sales Velocity
         </CardTitle>
         <CardDescription>
-          {data.length > 0 
+          {data.length > 0
             ? `Current performance vs pre-program baseline (₹${dailyBaseline.toLocaleString('en-IN', { maximumFractionDigits: 0 })}/day)`
             : "Start logging your daily revenue to see your sales velocity"
           }
@@ -89,14 +90,14 @@ export const SalesVelocityChart = () => {
             <LineChart data={data}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
               <XAxis dataKey="date" className="text-xs" />
-              <YAxis 
+              <YAxis
                 tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}k`}
                 className="text-xs"
               />
-              <Tooltip 
+              <Tooltip
                 formatter={(value) => [`₹${Number(value).toLocaleString('en-IN')}`, 'Revenue']}
-                contentStyle={{ 
-                  backgroundColor: 'hsl(var(--card))', 
+                contentStyle={{
+                  backgroundColor: 'hsl(var(--card))',
                   border: '1px solid hsl(var(--border))',
                   borderRadius: '8px'
                 }}

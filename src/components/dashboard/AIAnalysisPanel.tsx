@@ -25,15 +25,16 @@ interface AnalysisData {
   };
 }
 
-export const AIAnalysisPanel = () => {
+export const AIAnalysisPanel = ({ userId }: { userId?: string }) => {
   const { user, session } = useAuth();
+  const effectiveUserId = userId || user?.id;
   const { toast } = useToast();
   const [timeline, setTimeline] = useState<TimelineView>("weekly");
   const [loading, setLoading] = useState(false);
   const [analysis, setAnalysis] = useState<AnalysisData | null>(null);
 
   const fetchAnalysis = async () => {
-    if (!user || !session) return;
+    if (!effectiveUserId || !session) return;
 
     setLoading(true);
     try {
@@ -45,7 +46,7 @@ export const AIAnalysisPanel = () => {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${session.access_token}`,
           },
-          body: JSON.stringify({ timeline }),
+          body: JSON.stringify({ timeline, targetUserId: effectiveUserId }),
         }
       );
 
@@ -70,7 +71,7 @@ export const AIAnalysisPanel = () => {
 
   useEffect(() => {
     fetchAnalysis();
-  }, [user, session, timeline]);
+  }, [user, session, timeline, effectiveUserId]);
 
   const handleRefresh = () => {
     fetchAnalysis();
@@ -79,35 +80,36 @@ export const AIAnalysisPanel = () => {
   return (
     <Card>
       <CardHeader>
-        <div className="flex justify-between items-start">
+        <div className="flex flex-col md:flex-row justify-between items-start gap-4">
           <div>
             <CardTitle className="flex items-center gap-2">
-              <Bot className="w-5 h-5" />
+              <Bot className="w-5 h-5 text-violet-400" />
               AI Growth Analysis
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="mt-1">
               Personalized insights based on your actual data
               {analysis?.dataPoints && (
-                <span className="ml-2 text-xs">
-                  ({analysis.dataPoints.habits} habits, {analysis.dataPoints.learnings} learnings, {analysis.dataPoints.businessLogs} business logs)
+                <span className="block sm:inline sm:ml-2 text-xs text-muted-foreground/80 mt-1 sm:mt-0">
+                  ({analysis.dataPoints.habits} habits, {analysis.dataPoints.learnings} learnings, {analysis.dataPoints.businessLogs} logs)
                 </span>
               )}
             </CardDescription>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full md:w-auto justify-between md:justify-end bg-black/20 p-1 rounded-lg">
             <Button
               variant="ghost"
               size="icon"
               onClick={handleRefresh}
               disabled={loading}
+              className="hover:bg-white/10"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </Button>
-            <Tabs value={timeline} onValueChange={(v) => setTimeline(v as TimelineView)}>
-              <TabsList>
-                <TabsTrigger value="weekly">Weekly</TabsTrigger>
-                <TabsTrigger value="monthly">Monthly</TabsTrigger>
-                <TabsTrigger value="yearly">Yearly</TabsTrigger>
+            <Tabs value={timeline} onValueChange={(v) => setTimeline(v as TimelineView)} className="w-auto">
+              <TabsList className="bg-transparent h-8">
+                <TabsTrigger value="weekly" className="text-xs data-[state=active]:bg-white/10">Weekly</TabsTrigger>
+                <TabsTrigger value="monthly" className="text-xs data-[state=active]:bg-white/10">Monthly</TabsTrigger>
+                <TabsTrigger value="yearly" className="text-xs data-[state=active]:bg-white/10">Yearly</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
@@ -131,11 +133,10 @@ export const AIAnalysisPanel = () => {
                 {[1, 2, 3, 4, 5].map((star) => (
                   <Star
                     key={star}
-                    className={`w-5 h-5 ${
-                      star <= (analysis.performanceRating || 0)
-                        ? "fill-yellow-500 text-yellow-500"
-                        : "text-muted"
-                    }`}
+                    className={`w-5 h-5 ${star <= (analysis.performanceRating || 0)
+                      ? "fill-yellow-500 text-yellow-500"
+                      : "text-muted"
+                      }`}
                   />
                 ))}
               </div>

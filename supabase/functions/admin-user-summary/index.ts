@@ -48,7 +48,7 @@ serve(async (req) => {
       });
     }
 
-    const { targetUserId } = await req.json();
+    const { targetUserId, timeline = 'monthly', startDate: reqStartDate, endDate: reqEndDate } = await req.json();
     if (!targetUserId) {
       return new Response(JSON.stringify({ error: 'Target user ID required' }), {
         status: 400,
@@ -61,6 +61,49 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
+
+    // Calculate date ranges based on timeline
+    const now = new Date();
+    let startDate: Date;
+    let endDate: Date = now; // Default to now
+
+    switch (timeline) {
+      case 'daily':
+        if (reqStartDate) {
+          startDate = new Date(reqStartDate);
+          endDate = new Date(reqStartDate); // Ensure end date is same as start for daily query logic (usually handled by exact match or range inclusive)
+        } else {
+          startDate = now;
+        }
+        break;
+      case 'custom':
+        if (reqStartDate && reqEndDate) {
+          startDate = new Date(reqStartDate);
+          endDate = new Date(reqEndDate);
+        } else {
+          // Fallback to monthly if custom dates missing
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        }
+        break;
+      case 'weekly':
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case 'monthly':
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        break;
+      case 'yearly':
+        startDate = new Date(2023, 0, 1);
+        break;
+      default:
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    }
+
+    const startDateStr = startDate.toISOString().split('T')[0];
+    const endDateStr = endDate.toISOString().split('T')[0];
+
+    // For queries: if daily (start==end), usually strictly equals. 
+    // But generalized 'gte start, lte end' works for day ranges too if precision is day.
+    // If strict single day, start=end implies 1 day range.
 
     // Fetch user profile
     const { data: profile } = await supabaseAdmin
@@ -76,44 +119,55 @@ serve(async (req) => {
       .eq('user_id', targetUserId)
       .single();
 
-    // Fetch all daily habits (last 30 days)
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    
-    const { data: habits } = await supabaseAdmin
-      .from('daily_habits')
-      .select('*')
-      .eq('user_id', targetUserId)
-      .gte('log_date', thirtyDaysAgo.toISOString().split('T')[0])
-      .order('log_date', { ascending: false });
+    // Fetch all logs within range
+    const [habitsResult, learningResult, businessResult, achievementsResult] = await Promise.all([
+      supabaseAdmin
+        .from('daily_habits')
+        .select('*')
+        .eq('user_id', targetUserId)
+        .gte('log_date', startDateStr)
+        .lte('log_date', endDateStr)
+        .order('log_date', { ascending: false }),
+      supabaseAdmin
+        .from('daily_learning')
+        .select('*')
+        .eq('user_id', targetUserId)
+        .gte('log_date', startDateStr)
+        .lte('log_date', endDateStr)
+        .order('log_date', { ascending: false }),
+      supabaseAdmin
+        .from('daily_business_logs')
+        .select('*')
+        .eq('user_id', targetUserId)
+        .gte('log_date', startDateStr)
+        .lte('log_date', endDateStr)
+        .order('log_date', { ascending: false }),
+      supabaseAdmin
+        .from('achievements')
+        .select('*')
+        .eq('user_id', targetUserId)
+        // Achievements use 'earned_at' usually, check schema or assume simple timestamp check
+        // If earned_at is timestamp w/ timezone, this date range check might need casting or simpler approach
+        // For now, assuming standard date comparison or ignoring date filter if not applicable (but it usually is)
+        // .gte('earned_at', startDateStr) 
+        .order('earned_at', { ascending: false })
+    ]);
 
-    // Fetch all daily learning
-    const { data: learning } = await supabaseAdmin
-      .from('daily_learning')
-      .select('*')
-      .eq('user_id', targetUserId)
-      .gte('log_date', thirtyDaysAgo.toISOString().split('T')[0])
-      .order('log_date', { ascending: false });
-
-    // Fetch business logs
-    const { data: businessLogs } = await supabaseAdmin
-      .from('daily_business_logs')
-      .select('*')
-      .eq('user_id', targetUserId)
-      .gte('log_date', thirtyDaysAgo.toISOString().split('T')[0])
-      .order('log_date', { ascending: false });
-
-    // Fetch achievements
-    const { data: achievements } = await supabaseAdmin
-      .from('achievements')
-      .select('*')
-      .eq('user_id', targetUserId);
+    const habits = habitsResult.data || [];
+    const learning = learningResult.data || [];
+    const businessLogs = businessResult.data || [];
+    const achievements = achievementsResult.data || [];
 
     // Calculate metrics
-    const totalRevenue = businessLogs?.reduce((sum, log) => sum + Number(log.revenue), 0) || 0;
-    const totalProfit = businessLogs?.reduce((sum, log) => sum + Number(log.gross_profit), 0) || 0;
-    const daysLogged = habits?.length || 0;
-    const learningEntries = learning?.length || 0;
+    const totalRevenue = businessLogs.reduce((sum, log) => sum + Number(log.revenue || 0), 0);
+    const totalProfit = businessLogs.reduce((sum, log) => sum + Number(log.gross_profit || 0), 0);
+    const avgDailyRevenue = businessLogs.length > 0 ? totalRevenue / businessLogs.length : 0;
+
+    const habitCompletionDays = habits.filter(h => h.most_important_action).length;
+    const habitCompletionRate = habits.length > 0 ? (habitCompletionDays / habits.length) * 100 : 0;
+
+    const learningImplementations = learning.filter(l => l.implementation_plan).length;
+    const learningRate = learning.length > 0 ? (learningImplementations / learning.length) * 100 : 0;
 
     // Build context for AI
     const contextSummary = `
@@ -121,81 +175,128 @@ USER PROFILE:
 - Name: ${profile?.full_name || 'Not set'}
 - Organization: ${profile?.organization_name || 'Not set'}
 - Program: ${profile?.enrolled_program || 'Not set'}
-- Location: ${profile?.location || 'Not set'}
+- Timeline: ${timeline} (${startDateStr} to ${endDateStr})
 
 FINANCIAL GOALS:
 - Baseline Monthly Revenue: ₹${goals?.baseline_monthly_revenue?.toLocaleString('en-IN') || 0}
 - Year 1 Target: ₹${goals?.year_1_target?.toLocaleString('en-IN') || 0}
 - 5 Year Target: ₹${goals?.five_year_target?.toLocaleString('en-IN') || 0}
 
-LAST 30 DAYS PERFORMANCE:
-- Days with data logged: ${daysLogged}
-- Learning entries: ${learningEntries}
+METRICS SUMMARY:
+- Days with data logged: ${Math.max(habits.length, learning.length, businessLogs.length)}
 - Total Revenue: ₹${totalRevenue.toLocaleString('en-IN')}
 - Total Gross Profit: ₹${totalProfit.toLocaleString('en-IN')}
-- Achievements earned: ${achievements?.length || 0}
+- Habit Completion Rate: ${habitCompletionRate.toFixed(0)}%
+- Learning Implementation Rate: ${learningRate.toFixed(0)}%
 
-RECENT HABITS DATA:
-${habits?.slice(0, 5).map(h => `- ${h.log_date}: Wake ${h.wake_up_time || 'N/A'}, Action: ${h.most_important_action || 'N/A'}`).join('\n') || 'No habit data'}
+RECENT HABITS DATA (Sample):
+${habits.slice(0, 5).map(h => `- ${h.log_date}: Wake ${h.wake_up_time || 'N/A'}, Action: ${h.most_important_action || 'N/A'}`).join('\n') || 'No habit data'}
 
-RECENT LEARNING:
-${learning?.slice(0, 5).map(l => `- ${l.log_date}: ${l.learning_point?.substring(0, 100) || 'N/A'}`).join('\n') || 'No learning data'}
+RECENT LEARNING (Sample):
+${learning.slice(0, 5).map(l => `- ${l.log_date}: ${l.learning_point?.substring(0, 100) || 'N/A'}`).join('\n') || 'No learning data'}
 
-RECENT BUSINESS:
-${businessLogs?.slice(0, 5).map(b => `- ${b.log_date}: Revenue ₹${Number(b.revenue).toLocaleString('en-IN')}, Profit ₹${Number(b.gross_profit).toLocaleString('en-IN')}`).join('\n') || 'No business data'}
+RECENT BUSINESS (Sample):
+${businessLogs.slice(0, 5).map(b => `- ${b.log_date}: Revenue ₹${Number(b.revenue).toLocaleString('en-IN')}, Profit ₹${Number(b.gross_profit).toLocaleString('en-IN')}`).join('\n') || 'No business data'}
 `;
 
-    // Call Lovable AI for executive summary
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    // Call Google Gemini AI
+    const API_KEY = Deno.env.get('GEMINI_API_KEY') || "AIzaSyDq9Jr-KvbciG9jEwNDi7aAe8VRfq7o6AA";
+
+    const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${API_KEY}`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          {
-            role: 'system',
-            content: `You are an executive business analyst providing summaries for program administrators. Your job is to give a concise, actionable executive summary of a user's performance and engagement. Be direct and professional. Focus on:
-1. Overall engagement level (high/medium/low)
-2. Key strengths observed
-3. Areas of concern
-4. Recommended admin action (if any)
+        system_instruction: {
+          parts: {
+            text: `You are an executive business analyst providing summaries for program administrators. Analyze the user's ACTUAL data and provide personalized feedback.
+            
+You must respond with a valid JSON object with these exact fields:
+{
+  "summary": "High-level executive summary (3-4 sentences)",
+  "habitReport": "Analysis of habit consistency",
+  "learningReport": "Analysis of learning patterns",
+  "actionsReport": "Analysis of actions taken",
+  "resultsReport": "Analysis of financial performance vs goals",
+  "performanceRating": number from 1-5,
+  "suggestions": ["3 specific actionable suggestions"]
+}
 
-Keep the summary to 3-4 paragraphs maximum. Use specific numbers from the data provided.`
-          },
+Be direct, data-driven, and actionable.`
+          }
+        },
+        contents: [
           {
             role: 'user',
-            content: `Generate an executive summary for this user:\n\n${contextSummary}`
+            parts: {
+              text: `Generate an executive summary for this user:\n\n${contextSummary}`
+            }
           }
         ],
+        generationConfig: {
+          response_mime_type: "application/json"
+        }
       }),
     });
 
     if (!aiResponse.ok) {
       console.error('AI API error:', await aiResponse.text());
+      // Fallback JSON
       return new Response(JSON.stringify({
-        summary: `Unable to generate AI summary. Manual review needed.\n\nQuick Stats:\n- Days logged: ${daysLogged}\n- Revenue (30d): ₹${totalRevenue.toLocaleString('en-IN')}\n- Profit (30d): ₹${totalProfit.toLocaleString('en-IN')}`,
-        metrics: { daysLogged, totalRevenue, totalProfit, learningEntries }
+        summary: "Unable to generate AI summary. Showing raw metrics only.",
+        habitReport: "Data unavailable",
+        learningReport: "Data unavailable",
+        actionsReport: "Data unavailable",
+        resultsReport: "Data unavailable",
+        performanceRating: 0,
+        suggestions: [],
+        metrics: {
+          daysLogged: habits.length,
+          totalRevenue,
+          totalProfit,
+          learningEntries: learning.length,
+          achievementsCount: achievements.length
+        },
+        profile,
+        goals
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     const aiData = await aiResponse.json();
-    const summary = aiData.choices?.[0]?.message?.content || 'Unable to generate summary';
+    const aiContent = aiData.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    let parsedAnalysis;
+    try {
+      if (!aiContent) throw new Error("No content in AI response");
+
+      // Clean up markdown code blocks if present
+      let cleanJson = aiContent.trim();
+      const markdownMatch = cleanJson.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+      if (markdownMatch) {
+        cleanJson = markdownMatch[1];
+      }
+
+      parsedAnalysis = JSON.parse(cleanJson);
+    } catch (e) {
+      console.error("Failed to parse AI JSON. Raw content:", aiContent, "Error:", e);
+      parsedAnalysis = {
+        summary: "AI generated a response but it wasn't in the expected format. Raw response: " + (aiContent || "None"),
+        performanceRating: 0,
+        suggestions: []
+      };
+    }
 
     return new Response(JSON.stringify({
-      summary,
+      ...parsedAnalysis,
       metrics: {
-        daysLogged,
+        daysLogged: habits.length,
         totalRevenue,
         totalProfit,
-        learningEntries,
-        achievementsCount: achievements?.length || 0
+        learningEntries: learning.length,
+        achievementsCount: achievements.length
       },
       profile,
       goals

@@ -5,20 +5,21 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Flame } from "lucide-react";
 import { differenceInDays, format, subDays } from "date-fns";
 
-export const GrowthStreak = () => {
+export const GrowthStreak = ({ userId }: { userId?: string }) => {
   const { user } = useAuth();
+  const effectiveUserId = userId || user?.id;
   const [streak, setStreak] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
+    if (!effectiveUserId) return;
 
     const calculateStreak = async () => {
       const today = format(new Date(), "yyyy-MM-dd");
       const { data } = await supabase
         .from("daily_business_logs")
         .select("log_date")
-        .eq("user_id", user.id)
+        .eq("user_id", effectiveUserId)
         .order("log_date", { ascending: false })
         .limit(100);
 
@@ -48,7 +49,7 @@ export const GrowthStreak = () => {
     };
 
     calculateStreak();
-  }, [user]);
+  }, [effectiveUserId]);
 
   return (
     <Card className="bg-gradient-to-br from-orange-500/10 to-red-500/10 border-orange-500/20">

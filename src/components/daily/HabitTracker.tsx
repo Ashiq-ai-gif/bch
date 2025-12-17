@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { PlusCircle, Trash2 } from "lucide-react";
-import { format } from "date-fns";
 
 interface TodoItem {
   id: string;
@@ -18,12 +17,18 @@ interface TodoItem {
   is_ai_generated: boolean;
 }
 
-export const HabitTracker = () => {
+interface HabitTrackerProps {
+  date: string;
+}
+
+export const HabitTracker = ({ date }: HabitTrackerProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [habitId, setHabitId] = useState<string | null>(null);
   const [wakeTime, setWakeTime] = useState("");
+  const [todaysGoal, setTodaysGoal] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
   const [reflection, setReflection] = useState({
     most_important_action: "",
     what_went_well: "",
@@ -33,22 +38,33 @@ export const HabitTracker = () => {
   const [todos, setTodos] = useState<TodoItem[]>([]);
   const [newTodo, setNewTodo] = useState("");
 
-  const today = format(new Date(), "yyyy-MM-dd");
-
   useEffect(() => {
     if (!user) return;
+
+    // Reset state when date changes
+    setHabitId(null);
+    setWakeTime("");
+    setTodaysGoal("");
+    setReflection({
+      most_important_action: "",
+      what_went_well: "",
+      what_went_wrong: "",
+      what_to_improve: "",
+    });
+    setTodos([]);
 
     const fetchTodayData = async () => {
       const { data: habitData } = await supabase
         .from("daily_habits")
         .select("*")
         .eq("user_id", user.id)
-        .eq("log_date", today)
+        .eq("log_date", date)
         .maybeSingle();
 
       if (habitData) {
         setHabitId(habitData.id);
         setWakeTime(habitData.wake_up_time || "");
+        setTodaysGoal(habitData.todays_goal || "");
         setReflection({
           most_important_action: habitData.most_important_action || "",
           what_went_well: habitData.what_went_well || "",
@@ -70,7 +86,64 @@ export const HabitTracker = () => {
     };
 
     fetchTodayData();
-  }, [user, today]);
+  }, [user, date]);
+
+  const handleGenerateTasks = async () => {
+    if (!todaysGoal.trim()) {
+      toast({ title: "Error", description: "Please enter a goal first", variant: "destructive" });
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-tasks', {
+        body: { goal: todaysGoal }
+      });
+
+      if (error) throw error;
+
+      if (data.advice) {
+        toast({ title: "AI Advice", description: data.advice });
+      }
+
+      if (data.tasks && Array.isArray(data.tasks)) {
+        // Ensure habit record exists to attach tasks
+        let currentHabitId = habitId;
+        if (!currentHabitId) {
+          // Create habit if not exists
+          const { data: newHabit } = await supabase.from("daily_habits").insert({
+            user_id: user.id,
+            log_date: date,
+            todays_goal: todaysGoal
+          }).select().single();
+
+          if (newHabit) {
+            currentHabitId = newHabit.id;
+            setHabitId(currentHabitId);
+          }
+        }
+
+        if (currentHabitId) {
+          for (const task of data.tasks) {
+            const { data: newTodo } = await supabase.from("todo_items").insert({
+              user_id: user.id,
+              daily_habit_id: currentHabitId,
+              task_description: task,
+              is_ai_generated: true
+            }).select().single();
+
+            if (newTodo) setTodos(prev => [...prev, newTodo]);
+          }
+        }
+      }
+
+    } catch (e) {
+      console.error(e);
+      toast({ title: "Error", description: "Failed to generate tasks", variant: "destructive" });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const handleAddTodo = async () => {
     if (!user || !newTodo.trim()) return;
@@ -82,7 +155,8 @@ export const HabitTracker = () => {
         .from("daily_habits")
         .insert({
           user_id: user.id,
-          log_date: today,
+          log_date: date,
+          todays_goal: todaysGoal,
         })
         .select()
         .single();
@@ -162,13 +236,30 @@ export const HabitTracker = () => {
 
     setLoading(true);
 
+    let aiSummary = "";
+    // Only generate summary if we are saving habits (not just reflection fallback)
+    if (user) {
+      try {
+        const { data: summaryData, error: summaryError } = await supabase.functions.invoke('generate-daily-summary', {
+          body: { category: 'habits', data: { ...reflection, tasks_completed: todos.filter(t => t.completed).length, total_tasks: todos.length, wake_time: wakeTime, goal: todaysGoal } }
+        });
+        if (!summaryError && summaryData?.summary) {
+          aiSummary = summaryData.summary;
+        }
+      } catch (e) {
+        console.error("Failed to generate summary", e);
+      }
+    }
+
     const { error } = await supabase
       .from("daily_habits")
       .upsert({
         id: habitId || undefined,
         user_id: user.id,
-        log_date: today,
+        log_date: date,
         wake_up_time: wakeTime || null,
+        todays_goal: todaysGoal,
+        ai_summary: aiSummary || null, // Save summary
         ...reflection,
       }, {
         onConflict: "user_id,log_date",
@@ -187,6 +278,9 @@ export const HabitTracker = () => {
         title: "Success",
         description: "Your habits and reflection have been saved",
       });
+
+      // Background update of user persona
+      supabase.functions.invoke('update-user-persona').catch(console.error);
     }
   };
 
@@ -194,8 +288,8 @@ export const HabitTracker = () => {
     <div className="max-w-3xl mx-auto space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Daily Habits</CardTitle>
-          <CardDescription>Track your morning routine and daily tasks</CardDescription>
+          <CardTitle>Daily Habits & Goal</CardTitle>
+          <CardDescription>Track your morning routine, set a main goal, and generate tasks</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -209,6 +303,28 @@ export const HabitTracker = () => {
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="todays_goal">Today's Main Goal</Label>
+            <div className="flex gap-2">
+              <Textarea
+                id="todays_goal"
+                placeholder="E.g., Finish the monthly report"
+                value={todaysGoal}
+                onChange={(e) => setTodaysGoal(e.target.value)}
+                rows={2}
+              />
+              <Button
+                variant="secondary"
+                className="h-auto"
+                onClick={handleGenerateTasks}
+                disabled={isGenerating || !todaysGoal.trim()}
+              >
+                {isGenerating ? "Analyzing..." : "Generate Tasks"}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">The AI will analyze your goal and break it down into actionable tasks.</p>
+          </div>
+
+          <div className="space-y-2">
             <Label>Today's Tasks</Label>
             <div className="space-y-2">
               {todos.map((todo) => (
@@ -217,9 +333,10 @@ export const HabitTracker = () => {
                     checked={todo.completed}
                     onCheckedChange={() => handleToggleTodo(todo.id, todo.completed)}
                   />
-                  <span className={`flex-1 ${todo.completed ? "line-through text-muted-foreground" : ""}`}>
+                  <span className={`flex-1 ${todo.completed ? "line-through text-muted-foreground" : ""} ${todo.is_ai_generated ? "text-blue-600" : ""}`}>
                     {todo.task_description}
                   </span>
+                  {todo.is_ai_generated && <span className="text-[10px] bg-blue-100 text-blue-800 px-1 rounded">AI</span>}
                   <Button
                     variant="ghost"
                     size="icon"
