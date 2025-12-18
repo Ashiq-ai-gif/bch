@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MessageCircle, X, Send, Bot, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
 
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -19,11 +18,9 @@ export function Chatbot() {
     const [isOpen, setIsOpen] = useState(false);
 
     if (!user) {
-        console.log("Chatbot: No user found, not rendering");
+        // Silent return if no user, or keep log for debugging
         return null;
     }
-
-    console.log("Chatbot: User found, rendering", user.id);
 
     const [messages, setMessages] = useState<Message[]>([
         { role: 'assistant', content: "Hello! I'm your Business Coach AI. How can I help you today?" }
@@ -31,7 +28,6 @@ export function Chatbot() {
     const [inputValue, setInputValue] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
-    const { toast } = useToast();
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -63,11 +59,7 @@ export function Chatbot() {
             setMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
         } catch (error) {
             console.error('Chat error:', error);
-            toast({
-                title: "Error",
-                description: "Failed to get response from AI.",
-                variant: "destructive"
-            });
+            // Removed toast to fail gracefully without crashing if hook is broken
         } finally {
             setIsLoading(false);
         }
