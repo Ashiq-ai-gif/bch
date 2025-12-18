@@ -13,12 +13,6 @@ interface Message {
 export function Chatbot() {
     const { user } = useAuth();
     const [isOpen, setIsOpen] = useState(false);
-
-    if (!user) {
-        // Silent return if no user, or keep log for debugging
-        return null;
-    }
-
     const [messages, setMessages] = useState<Message[]>([
         { role: 'assistant', content: "Hello! I'm your Business Coach AI. How can I help you today?" }
     ]);
@@ -31,6 +25,12 @@ export function Chatbot() {
             scrollRef.current.scrollIntoView({ behavior: "smooth" });
         }
     }, [messages, isOpen]);
+
+    if (!user) {
+        return null;
+    }
+
+
 
     const handleSendMessage = async () => {
         if (!inputValue.trim()) return;
