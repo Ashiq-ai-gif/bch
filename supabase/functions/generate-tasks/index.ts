@@ -40,8 +40,8 @@ serve(async (req) => {
         }
 
         // Call Google Gemini AI
-        // Hardcoded key as per user request to bypass environment issues
-        const API_KEY = "AIzaSyAJN5-n6Nhz9cdsiXw9IBcn8X-w8dqsmJs";
+        // Use env var for security
+        const API_KEY = Deno.env.get('GEMINI_API_KEY');
         if (!API_KEY) {
             throw new Error("GEMINI_API_KEY not set");
         }

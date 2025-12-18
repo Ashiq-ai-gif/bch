@@ -82,8 +82,11 @@ Recent Data (Last 7 days):
 - Goals: ${goals ? `Target: ₹${goals.year_1_target}` : 'No goals set'}
 `;
 
-        // Hardcoded key as per user preference
-        const API_KEY = "AIzaSyAJN5-n6Nhz9cdsiXw9IBcn8X-w8dqsmJs";
+        // Use env var for security
+        const API_KEY = Deno.env.get('GEMINI_API_KEY');
+        if (!API_KEY) {
+            throw new Error("GEMINI_API_KEY not set");
+        }
 
         // Construct the conversation
         const chatHistory = history?.map((msg: any) => ({
