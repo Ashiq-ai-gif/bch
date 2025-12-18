@@ -8,6 +8,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Suspense, lazy } from "react";
 import { MeshBackground } from "@/components/ui/mesh-background";
+import { Chatbot } from "@/components/Chatbot";
 
 // Lazy load pages for better initial performance
 const Landing = lazy(() => import("./pages/Landing"));
@@ -78,6 +79,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
+          <Chatbot />
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
