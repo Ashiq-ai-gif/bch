@@ -67,17 +67,40 @@ export const LearningTracker = ({ date }: LearningTrackerProps) => {
     setAiLoading(true);
     // TODO: Call AI edge function to generate suggestions
     // For now, using placeholder
-    setTimeout(() => {
-      setData({
-        ...data,
-        ai_suggestions: "Based on your learning about digital marketing, consider:\n1. Testing 3 different ad variations this week\n2. Setting up retargeting campaigns for website visitors\n3. Creating a content calendar to maintain consistent posting",
+
+    try {
+      const { data: aiData, error } = await supabase.functions.invoke('generate-daily-summary', {
+        body: {
+          category: 'learning',
+          data: {
+            learning_point: data.learning_point,
+            implementation_plan: data.implementation_plan
+          }
+        }
       });
-      setAiLoading(false);
+
+      if (error) throw error;
+
+      if (aiData?.summary) {
+        setData({
+          ...data,
+          ai_suggestions: aiData.summary,
+        });
+        toast({
+          title: "AI Suggestions Generated",
+          description: "Review the suggestions below",
+        });
+      }
+    } catch (error) {
+      console.error("AI Error:", error);
       toast({
-        title: "AI Suggestions Generated",
-        description: "Review the suggestions below",
+        title: "AI Generation Failed",
+        description: "Could not generate suggestions. Please try again.",
+        variant: "destructive",
       });
-    }, 2000);
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   const handleSave = async () => {

@@ -40,7 +40,11 @@ serve(async (req) => {
         }
 
         // Call Google Gemini AI
-        const API_KEY = Deno.env.get('GEMINI_API_KEY') || "AIzaSyDq9Jr-KvbciG9jEwNDi7aAe8VRfq7o6AA";
+        // Hardcoded key as per user request to bypass environment issues
+        const API_KEY = "AIzaSyAJN5-n6Nhz9cdsiXw9IBcn8X-w8dqsmJs";
+        if (!API_KEY) {
+            throw new Error("GEMINI_API_KEY not set");
+        }
 
         const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${API_KEY}`, {
             method: 'POST',
@@ -49,8 +53,9 @@ serve(async (req) => {
             },
             body: JSON.stringify({
                 system_instruction: {
-                    parts: {
-                        text: `You are a productivity coach tailored to THIS SPECIFIC USER.
+                    parts: [
+                        {
+                            text: `You are a productivity coach tailored to THIS SPECIFIC USER.
             
             USER PERSONA & CONTEXT:
             "${personaSummary}"
@@ -69,14 +74,17 @@ serve(async (req) => {
               "tasks": ["Task 1", "Task 2", "Task 3"]
             }
             `
-                    }
+                        }
+                    ]
                 },
                 contents: [
                     {
                         role: 'user',
-                        parts: {
-                            text: `My goal for today is: "${goal}"`
-                        }
+                        parts: [
+                            {
+                                text: `My goal for today is: "${goal}"`
+                            }
+                        ]
                     }
                 ],
                 generationConfig: {
@@ -88,13 +96,14 @@ serve(async (req) => {
         if (!aiResponse.ok) {
             const errorText = await aiResponse.text();
             console.error('AI API error:', aiResponse.status, errorText);
-            throw new Error(`AI API Error: ${aiResponse.status}`);
+            throw new Error(`AI API Error: ${aiResponse.status} - ${errorText}`);
         }
 
         const aiData = await aiResponse.json();
         const aiContent = aiData.candidates?.[0]?.content?.parts?.[0]?.text;
 
         if (!aiContent) {
+            console.error("AI Response has no content:", JSON.stringify(aiData));
             throw new Error("No content in AI response");
         }
 
@@ -102,13 +111,15 @@ serve(async (req) => {
         let parsedResponse;
         try {
             let jsonStr = aiContent.trim();
+            console.log("Raw AI Content:", jsonStr); // DEBUG LOG
+
             const jsonMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
             if (jsonMatch) {
                 jsonStr = jsonMatch[1];
             }
             parsedResponse = JSON.parse(jsonStr);
         } catch (e) {
-            console.error("Failed to parse AI JSON", e);
+            console.error("Failed to parse AI JSON:", e, "Content was:", aiContent);
             parsedResponse = {
                 advice: "Here are some tasks to help you get started.",
                 tasks: ["Define the scope", "Start with the first step", "Review progress"]
@@ -121,8 +132,16 @@ serve(async (req) => {
 
     } catch (error) {
         console.error('Error in generate-tasks function:', error);
-        return new Response(JSON.stringify({ error: error.message }), {
-            status: 500,
+
+        // Return 200 even on error so client can read the message
+        // Supabase client throws on 500, hiding the body
+        return new Response(JSON.stringify({
+            error: error.message,
+            debug_key_len: Deno.env.get('GEMINI_API_KEY')?.length ?? 0,
+            debug_key_start: Deno.env.get('GEMINI_API_KEY')?.substring(0, 5) ?? "NULL",
+            debug_key_end: Deno.env.get('GEMINI_API_KEY')?.slice(-4) ?? "NULL"
+        }), {
+            status: 200,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
     }

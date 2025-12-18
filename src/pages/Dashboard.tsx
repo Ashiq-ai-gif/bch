@@ -35,90 +35,106 @@ const Dashboard = ({ userId }: DashboardProps) => {
   useEffect(() => {
     if (!user) return;
 
-    const fetchProfile = async () => {
-      const { data } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("user_id", effectiveUserId)
-        .single();
-
-      setProfile(data);
-
-      const { data: goalsData } = await supabase
-        .from("financial_goals")
-        .select("id")
-        .eq("user_id", effectiveUserId)
-        .single();
-
-      if (!goalsData && data?.organization_name && !isViewMode) {
-        navigate("/onboarding");
-        return;
-      }
-
-      setHasGoals(!!goalsData);
-      setLoading(false);
-    };
-
-    const fetchTodayStats = async () => {
+    const fetchAllData = async () => {
       const today = format(new Date(), 'yyyy-MM-dd');
 
-      // Fetch Learning
-      const { data: learningData } = await supabase
-        .from("daily_learning")
-        .select("learning_point")
-        .eq("user_id", effectiveUserId)
-        .eq("log_date", today)
-        .maybeSingle();
+      try {
+        // Parallel data fetching
+        const [profileResult, goalsResult, todayStatsResult] = await Promise.all([
+          // 1. Profile
+          supabase
+            .from("profiles")
+            .select("*")
+            .eq("user_id", effectiveUserId)
+            .limit(1)
+            .maybeSingle(),
 
-      // Fetch Business
-      const { data: businessData } = await supabase
-        .from("daily_business_logs")
-        .select("revenue, gross_profit, ai_summary")
-        .eq("user_id", effectiveUserId)
-        .eq("log_date", today)
-        .maybeSingle();
+          // 2. Financial Goals
+          supabase
+            .from("financial_goals")
+            .select("id")
+            .eq("user_id", effectiveUserId)
+            .limit(1)
+            .maybeSingle(),
 
-      // Fetch Habits & Tasks
-      const { data: habitData } = await supabase
-        .from("daily_habits")
-        .select("id, ai_summary")
-        .eq("user_id", effectiveUserId)
-        .eq("log_date", today)
-        .maybeSingle();
+          // 3. Today's Stats (Combined logic)
+          (async () => {
+            const [learning, business, habit] = await Promise.all([
+              supabase
+                .from("daily_learning")
+                .select("learning_point")
+                .eq("user_id", effectiveUserId)
+                .eq("log_date", today)
+                .maybeSingle(),
+              supabase
+                .from("daily_business_logs")
+                .select("revenue, gross_profit, ai_summary")
+                .eq("user_id", effectiveUserId)
+                .eq("log_date", today)
+                .maybeSingle(),
+              supabase
+                .from("daily_habits")
+                .select("id, ai_summary")
+                .eq("user_id", effectiveUserId)
+                .eq("log_date", today)
+                .maybeSingle()
+            ]);
+            return { learning, business, habit };
+          })()
+        ]);
 
-      let habitsStats = { total: 0, completed: 0, exists: false };
+        const profileData = profileResult.data;
+        const goalsData = goalsResult.data;
 
-      if (habitData) {
-        const { data: todos } = await supabase
-          .from("todo_items")
-          .select("completed")
-          .eq("daily_habit_id", habitData.id);
+        setProfile(profileData);
+        setHasGoals(!!goalsData);
 
-        if (todos) {
-          habitsStats = {
-            total: todos.length,
-            completed: todos.filter(t => t.completed).length,
-            exists: true
-          };
-        } else {
-          habitsStats.exists = true;
+        // Redirect logic using the fetched data
+        if (!goalsData && profileData?.organization_name && !isViewMode) {
+          navigate("/onboarding");
+          return;
         }
+
+        // Process Stats
+        const { learning: learningResult, business: businessResult, habit: habitResult } = todayStatsResult;
+
+        let habitsStats = { total: 0, completed: 0, exists: false };
+        if (habitResult.data) {
+          const { data: todos } = await supabase
+            .from("todo_items")
+            .select("completed")
+            .eq("daily_habit_id", habitResult.data.id);
+
+          if (todos) {
+            habitsStats = {
+              total: todos.length,
+              completed: todos.filter(t => t.completed).length,
+              exists: true
+            };
+          } else {
+            habitsStats.exists = true;
+          }
+        }
+
+        setTodayStats({
+          learning: learningResult.data?.learning_point || null,
+          habits: { ...habitsStats, summary: habitResult.data?.ai_summary || null },
+          business: {
+            revenue: Number(businessResult.data?.revenue) || 0,
+            profit: Number(businessResult.data?.gross_profit) || 0,
+            logged: !!businessResult.data,
+            summary: businessResult.data?.ai_summary || null
+          }
+        });
+
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+      } finally {
+        setLoading(false);
       }
-
-      setTodayStats({
-        learning: learningData?.learning_point || null,
-        habits: { ...habitsStats, summary: habitData?.ai_summary || null },
-        business: {
-          revenue: Number(businessData?.revenue) || 0,
-          profit: Number(businessData?.gross_profit) || 0,
-          logged: !!businessData,
-          summary: businessData?.ai_summary || null
-        }
-      });
     };
 
-    fetchProfile();
-    fetchTodayStats();
+    fetchAllData();
   }, [user, navigate, effectiveUserId]);
 
   if (loading) {

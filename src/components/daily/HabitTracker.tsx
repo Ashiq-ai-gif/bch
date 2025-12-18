@@ -96,17 +96,18 @@ export const HabitTracker = ({ date }: HabitTrackerProps) => {
 
     setIsGenerating(true);
     try {
-      const { data, error } = await supabase.functions.invoke('generate-tasks', {
+      const { data: aiData, error: aiError } = await supabase.functions.invoke('generate-tasks', {
         body: { goal: todaysGoal }
       });
 
-      if (error) throw error;
+      if (aiError) throw aiError;
+      if (aiData?.error) throw new Error(aiData.error);
 
-      if (data.advice) {
-        toast({ title: "AI Advice", description: data.advice });
+      if (aiData.advice) {
+        toast({ title: "AI Advice", description: aiData.advice });
       }
 
-      if (data.tasks && Array.isArray(data.tasks)) {
+      if (aiData.tasks && Array.isArray(aiData.tasks)) {
         // Ensure habit record exists to attach tasks
         let currentHabitId = habitId;
         if (!currentHabitId) {
@@ -124,7 +125,7 @@ export const HabitTracker = ({ date }: HabitTrackerProps) => {
         }
 
         if (currentHabitId) {
-          for (const task of data.tasks) {
+          for (const task of aiData.tasks) {
             const { data: newTodo } = await supabase.from("todo_items").insert({
               user_id: user.id,
               daily_habit_id: currentHabitId,
@@ -137,9 +138,13 @@ export const HabitTracker = ({ date }: HabitTrackerProps) => {
         }
       }
 
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      toast({ title: "Error", description: "Failed to generate tasks", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: e.message || "Failed to generate tasks",
+        variant: "destructive"
+      });
     } finally {
       setIsGenerating(false);
     }

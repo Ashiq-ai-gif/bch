@@ -51,8 +51,11 @@ export const AIAnalysisPanel = ({ userId }: { userId?: string }) => {
       );
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to fetch analysis');
+        const data = await response.json();
+        if (data?.error) {
+          throw new Error(data.error);
+        }
+        throw new Error('Failed to fetch analysis'); // Fallback if no specific error message
       }
 
       const data = await response.json();

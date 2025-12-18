@@ -207,7 +207,12 @@ METRICS:
 `;
 
     // Call Google Gemini AI
-    const API_KEY = Deno.env.get('GEMINI_API_KEY') || "AIzaSyDq9Jr-KvbciG9jEwNDi7aAe8VRfq7o6AA";
+    // Call Google Gemini AI
+    // Hardcoded key as per user request to bypass environment issues
+    const API_KEY = "AIzaSyAJN5-n6Nhz9cdsiXw9IBcn8X-w8dqsmJs";
+    if (!API_KEY) {
+      throw new Error("GEMINI_API_KEY not set");
+    }
 
     const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${API_KEY}`, {
       method: 'POST',
@@ -216,8 +221,9 @@ METRICS:
       },
       body: JSON.stringify({
         system_instruction: {
-          parts: {
-            text: `You are a business growth coach. Analyze the user's ACTUAL data and provide personalized feedback.
+          parts: [
+            {
+              text: `You are a business growth coach. Analyze the user's ACTUAL data and provide personalized feedback.
 
 CRITICAL CONTEXT - DATA CONSISTENCY:
 - This analysis ONLY covers ${expectedDays} days (${startDateStr} to ${endDateStr}).
@@ -243,14 +249,17 @@ You must respond with a valid JSON object with these exact fields:
 }
 
 Be direct, data-driven, and actionable. Reference specific dates, numbers, or entries when possible.`
-          }
+            }
+          ]
         },
         contents: [
           {
             role: 'user',
-            parts: {
-              text: `Analyze this period (${expectedDays} days expected) and provide a growth report:\n\n${contextSummary}`
-            }
+            parts: [
+              {
+                text: `Analyze this period (${expectedDays} days expected) and provide a growth report:\n\n${contextSummary}`
+              }
+            ]
           }
         ],
         generationConfig: {
@@ -341,9 +350,11 @@ Be direct, data-driven, and actionable. Reference specific dates, numbers, or en
   } catch (error) {
     console.error('Error in ai-analysis function:', error);
     return new Response(JSON.stringify({
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : 'Unknown error',
+      debug_key_len: Deno.env.get('GEMINI_API_KEY')?.length ?? 0,
+      debug_key_start: Deno.env.get('GEMINI_API_KEY')?.substring(0, 5) ?? "NULL"
     }), {
-      status: 500,
+      status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }

@@ -16,6 +16,7 @@ const Onboarding = lazy(() => import("./pages/Onboarding"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const DailyInput = lazy(() => import("./pages/DailyInput"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const DownloadPage = lazy(() => import("./pages/Download"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -72,6 +73,7 @@ const App = () => (
                   </ProtectedRoute>
                 }
               />
+              <Route path="/download" element={<DownloadPage />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

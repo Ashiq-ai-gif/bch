@@ -74,15 +74,21 @@ serve(async (req) => {
     `;
 
         // Call Google Gemini AI
-        const API_KEY = Deno.env.get('GEMINI_API_KEY') || "AIzaSyDq9Jr-KvbciG9jEwNDi7aAe8VRfq7o6AA";
+        // Call Google Gemini AI
+        // Hardcoded key as per user request to bypass environment issues
+        const API_KEY = "AIzaSyAJN5-n6Nhz9cdsiXw9IBcn8X-w8dqsmJs";
+        if (!API_KEY) {
+            throw new Error("GEMINI_API_KEY not set");
+        }
 
         const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${API_KEY}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 system_instruction: {
-                    parts: {
-                        text: `You are a sophisticated AI Profiler. 
+                    parts: [
+                        {
+                            text: `You are a sophisticated AI Profiler. 
             Your goal is to maintain a "Living Persona Document" for this user.
             
             Read the EXISTING SUMMARY, PROFILE, and RECENT LOGS.
@@ -96,9 +102,10 @@ serve(async (req) => {
             
             This summary will be used by other AI agents to generate personalized tasks.
             Do NOT include "Here is the summary". Just write the summary text directly.`
-                    }
+                        }
+                    ]
                 },
-                contents: [{ role: 'user', parts: { text: `Update the persona based on this data:\n${context}` } }]
+                contents: [{ role: 'user', parts: [{ text: `Update the persona based on this data:\n${context}` }] }]
             }),
         });
 

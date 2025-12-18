@@ -136,6 +136,17 @@ const Onboarding = () => {
     setLoading(true);
 
     // Save financial goals
+    // First delete existing goals for this user to avoid duplicates
+    const { error: deleteError } = await supabase
+      .from("financial_goals")
+      .delete()
+      .eq("user_id", user.id);
+
+    if (deleteError) {
+      console.error("Error deleting old goals:", deleteError);
+      // Continue anyway, worst case we add a duplicate which is handled by dashboard now
+    }
+
     const { error: goalsError } = await supabase
       .from("financial_goals")
       .insert({

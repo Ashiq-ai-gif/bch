@@ -31,6 +31,7 @@ export const GoalProgressBar = ({ userId }: { userId?: string }) => {
         .from("financial_goals")
         .select("*")
         .eq("user_id", effectiveUserId)
+        .limit(1)
         .maybeSingle();
 
       if (!goalsData) {
