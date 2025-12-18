@@ -9,6 +9,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Suspense, lazy } from "react";
 import { MeshBackground } from "@/components/ui/mesh-background";
 import { Chatbot } from "@/components/Chatbot";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 // Lazy load pages for better initial performance
 const Landing = lazy(() => import("./pages/Landing"));
@@ -79,11 +80,13 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
-          <Chatbot />
+          <ErrorBoundary>
+            <Chatbot />
+          </ErrorBoundary>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
-  </QueryClientProvider>
+  </QueryClientProvider >
 );
 
 export default App;
