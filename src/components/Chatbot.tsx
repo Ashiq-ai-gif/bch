@@ -18,7 +18,12 @@ export function Chatbot() {
     const { user } = useAuth();
     const [isOpen, setIsOpen] = useState(false);
 
-    if (!user) return null;
+    if (!user) {
+        console.log("Chatbot: No user found, not rendering");
+        return null;
+    }
+
+    console.log("Chatbot: User found, rendering", user.id);
 
     const [messages, setMessages] = useState<Message[]>([
         { role: 'assistant', content: "Hello! I'm your Business Coach AI. How can I help you today?" }
@@ -69,7 +74,7 @@ export function Chatbot() {
     };
 
     return (
-        <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end print:hidden">
+        <div className="fixed bottom-6 right-6 z-[100] flex flex-col items-end print:hidden">
             {/* Chat Window */}
             {isOpen && (
                 <Card className="w-[350px] h-[500px] mb-4 flex flex-col shadow-2xl border-primary/20 backdrop-blur-md bg-background/95 animate-in slide-in-from-bottom-5 fade-in duration-300 rounded-xl overflow-hidden">
