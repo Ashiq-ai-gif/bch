@@ -29,7 +29,10 @@ export class ErrorBoundary extends Component<Props, State> {
     public render() {
         if (this.state.hasError) {
             return (
-                <div className="fixed bottom-6 right-6 z-[100]">
+                <div className="fixed bottom-6 right-6 z-[100] flex flex-col items-end gap-2">
+                    <div className="bg-destructive/10 text-destructive text-xs p-2 rounded-md border border-destructive/20 max-w-[200px]">
+                        Err: {this.state.error?.message?.slice(0, 50)}
+                    </div>
                     <TooltipProvider>
                         <Tooltip>
                             <TooltipTrigger asChild>
@@ -38,7 +41,7 @@ export class ErrorBoundary extends Component<Props, State> {
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                                <p>Chatbot Error: {this.state.error?.message?.slice(0, 50)}...</p>
+                                <p>Chatbot Error: {this.state.error?.message}</p>
                             </TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
