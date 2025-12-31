@@ -6,8 +6,8 @@ import { useNavigate } from 'react-router-dom';
 interface AuthContextType {
   user: User | null;
   session: Session | null;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
+  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   loading: boolean;
 }
@@ -50,7 +50,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const signUp = async (email: string, password: string, fullName: string) => {
+interface AuthResponse {
+  error: Error | null;
+}
+
+  const signUp = async (email: string, password: string, fullName: string): Promise<AuthResponse> => {
     try {
       const redirectUrl = `${window.location.origin}/dashboard`;
       
@@ -66,12 +70,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       
       return { error };
-    } catch (error: any) {
-      return { error };
+    } catch (error) {
+       return { error: error as Error };
     }
   };
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string): Promise<AuthResponse> => {
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email,
@@ -79,8 +83,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       
       return { error };
-    } catch (error: any) {
-      return { error };
+    } catch (error) {
+       return { error: error as Error };
     }
   };
 

@@ -79,7 +79,7 @@ const Auth = () => {
           description: "Welcome to Business Growth Accelerator",
         });
       }
-    } catch (err: any) {
+    } catch (err) {
       setError('An unexpected error occurred. Please try again.');
       console.error('Signup error:', err);
     } finally {
@@ -115,7 +115,7 @@ const Auth = () => {
           description: "Successfully signed in",
         });
       }
-    } catch (err: any) {
+    } catch (err) {
       setError('An unexpected error occurred. Please try again.');
       console.error('Signin error:', err);
     } finally {

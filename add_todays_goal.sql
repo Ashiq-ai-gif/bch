@@ -2,4 +2,6 @@
 ALTER TABLE public.daily_habits 
 ADD COLUMN IF NOT EXISTS todays_goal TEXT;
 
--- Update RLS policies if necessary (usually not needed for just adding a column to an existing table if policies allow update)
+-- Add ai_summary column to daily_habits table (used for daily reflection summary)
+ALTER TABLE public.daily_habits 
+ADD COLUMN IF NOT EXISTS ai_summary TEXT;

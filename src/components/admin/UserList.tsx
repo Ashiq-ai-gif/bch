@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Search, User } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface UserProfile {
   id: string;
@@ -11,6 +12,7 @@ interface UserProfile {
   full_name: string;
   organization_name: string | null;
   enrolled_program: string | null;
+  is_approved: boolean | null;
 }
 
 interface UserListProps {
@@ -28,14 +30,14 @@ export function UserList({ onSelectUser, selectedUserId }: UserListProps) {
     async function fetchUsers() {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, user_id, full_name, organization_name, enrolled_program')
-        .order('full_name');
+        .select('id, user_id, full_name, organization_name, enrolled_program, is_approved')
+        .order('created_at', { ascending: false });
 
       if (error) {
         console.error('Error fetching users:', error);
       } else {
-        setUsers(data || []);
-        setFilteredUsers(data || []);
+        setUsers((data as any) || []);
+        setFilteredUsers((data as any) || []);
       }
       setLoading(false);
     }
@@ -70,6 +72,22 @@ export function UserList({ onSelectUser, selectedUserId }: UserListProps) {
   const formatProgram = (program: string | null) => {
     if (!program) return '';
     return program.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+  };
+
+  const handleApprove = async (e: React.MouseEvent, userId: string) => {
+    e.stopPropagation();
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_approved: true } as any)
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      setUsers(users.map(u => u.user_id === userId ? { ...u, is_approved: true } : u));
+    } catch (error) {
+      console.error('Error approving user:', error);
+    }
   };
 
   return (
@@ -109,11 +127,28 @@ export function UserList({ onSelectUser, selectedUserId }: UserListProps) {
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{user.full_name || 'Unnamed User'}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium truncate">{user.full_name || 'Unnamed User'}</p>
+                    {user.is_approved === false && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                        Pending
+                      </span>
+                    )}
+                  </div>
                   <p className={`text-sm truncate ${selectedUserId === user.user_id ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
                     {user.organization_name || formatProgram(user.enrolled_program) || 'No organization'}
                   </p>
                 </div>
+                {user.is_approved === false && (
+                   <Button
+                    size="sm"
+                    variant="secondary"
+                    className="ml-auto h-7 text-xs"
+                    onClick={(e) => handleApprove(e, user.user_id)}
+                  >
+                    Approve
+                  </Button>
+                )}
               </button>
             ))}
           </div>

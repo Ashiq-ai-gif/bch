@@ -138,11 +138,11 @@ export const HabitTracker = ({ date }: HabitTrackerProps) => {
         }
       }
 
-    } catch (e: any) {
+    } catch (e) {
       console.error(e);
       toast({
         title: "Error",
-        description: e.message || "Failed to generate tasks",
+        description: e instanceof Error ? e.message : "Failed to generate tasks",
         variant: "destructive"
       });
     } finally {

@@ -19,6 +19,10 @@ const Dashboard = lazy(() => import("./pages/Dashboard"));
 const DailyInput = lazy(() => import("./pages/DailyInput"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const DownloadPage = lazy(() => import("./pages/Download"));
+const PendingApproval = lazy(() => import("./pages/PendingApproval"));
+const WhatsappSandbox = lazy(() => import("./pages/WhatsappSandbox"));
+const WeeklyReport = lazy(() => import("./pages/reports/WeeklyReport"));
+const MonthlyReport = lazy(() => import("./pages/reports/MonthlyReport"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -76,6 +80,10 @@ const App = () => (
                 }
               />
               <Route path="/download" element={<DownloadPage />} />
+              <Route path="/pending-approval" element={<PendingApproval />} />
+              <Route path="/whatsapp-sandbox" element={<WhatsappSandbox />} />
+              <Route path="/reports/weekly" element={<ProtectedRoute><WeeklyReport /></ProtectedRoute>} />
+              <Route path="/reports/monthly" element={<ProtectedRoute><MonthlyReport /></ProtectedRoute>} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
