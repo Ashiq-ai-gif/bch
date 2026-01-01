@@ -132,6 +132,7 @@ export type Database = {
           what_went_well: string | null
           what_went_wrong: string | null
           ai_summary: string | null
+          todays_goal: string | null
         }
         Insert: {
           created_at?: string | null
@@ -145,6 +146,7 @@ export type Database = {
           what_went_well?: string | null
           what_went_wrong?: string | null
           ai_summary?: string | null
+          todays_goal?: string | null
         }
         Update: {
           created_at?: string | null
@@ -158,6 +160,7 @@ export type Database = {
           what_went_well?: string | null
           what_went_wrong?: string | null
           ai_summary?: string | null
+          todays_goal?: string | null
         }
         Relationships: []
       }
@@ -311,6 +314,7 @@ export type Database = {
           phone: string | null
           updated_at: string
           user_id: string
+          is_approved: boolean | null
         }
         Insert: {
           company_type?: Database["public"]["Enums"]["company_type"] | null
@@ -323,6 +327,7 @@ export type Database = {
           phone?: string | null
           updated_at?: string
           user_id: string
+          is_approved?: boolean | null
         }
         Update: {
           company_type?: Database["public"]["Enums"]["company_type"] | null
@@ -335,6 +340,7 @@ export type Database = {
           phone?: string | null
           updated_at?: string
           user_id?: string
+          is_approved?: boolean | null
         }
         Relationships: []
       }

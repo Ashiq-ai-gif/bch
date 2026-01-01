@@ -28,11 +28,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(session?.user ?? null);
         
         // Handle navigation after state updates
-        if (event === 'SIGNED_IN' && session) {
-          setTimeout(() => {
-            navigate('/dashboard');
-          }, 0);
-        } else if (event === 'SIGNED_OUT') {
+        if (event === 'SIGNED_OUT') {
           setTimeout(() => {
             navigate('/auth');
           }, 0);

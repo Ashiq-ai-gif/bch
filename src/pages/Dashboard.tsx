@@ -9,7 +9,7 @@ import { SalesVelocityChart } from "@/components/dashboard/SalesVelocityChart";
 import { GoalProgressBar } from "@/components/dashboard/GoalProgressBar";
 import { GrowthStreak } from "@/components/dashboard/GrowthStreak";
 import { AIAnalysisPanel } from "@/components/dashboard/AIAnalysisPanel";
-import { PlusCircle, BookOpen, CheckSquare, TrendingUp, Shield } from "lucide-react";
+import { PlusCircle, BookOpen, CheckSquare, TrendingUp, Shield, FileText, Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
 
@@ -282,6 +282,34 @@ const Dashboard = ({ userId }: DashboardProps) => {
                     ) : (
                       "Record today's revenue and business performance"
                     )}
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <motion.div variants={itemVariants} className="grid md:grid-cols-2 gap-4">
+              <Card className="glass-card glass-card-hover cursor-pointer border-l-4 border-l-orange-500" onClick={() => !isViewMode && navigate("/reports/weekly")}>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <FileText className="w-5 h-5 text-orange-400" />Weekly Report
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">
+                    Review your weekly progress and AI insights
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="glass-card glass-card-hover cursor-pointer border-l-4 border-l-teal-500" onClick={() => !isViewMode && navigate("/reports/monthly")}>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Calendar className="w-5 h-5 text-teal-400" />Monthly Report
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">
+                    Deep dive into monthly trends and strategy
                   </p>
                 </CardContent>
               </Card>

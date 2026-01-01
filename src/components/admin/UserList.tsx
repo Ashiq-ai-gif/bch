@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Search, User } from 'lucide-react';
+import { Search, User, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface UserProfile {
@@ -36,8 +36,8 @@ export function UserList({ onSelectUser, selectedUserId }: UserListProps) {
       if (error) {
         console.error('Error fetching users:', error);
       } else {
-        setUsers((data as any) || []);
-        setFilteredUsers((data as any) || []);
+        setUsers(data || []);
+        setFilteredUsers(data || []);
       }
       setLoading(false);
     }
@@ -79,14 +79,15 @@ export function UserList({ onSelectUser, selectedUserId }: UserListProps) {
     try {
       const { error } = await supabase
         .from('profiles')
-        .update({ is_approved: true } as any)
+        .update({ is_approved: true })
         .eq('user_id', userId);
 
       if (error) throw error;
 
       setUsers(users.map(u => u.user_id === userId ? { ...u, is_approved: true } : u));
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error approving user:', error);
+      alert(`Failed to approve user: ${error.message}`);
     }
   };
 
@@ -141,12 +142,13 @@ export function UserList({ onSelectUser, selectedUserId }: UserListProps) {
                 </div>
                 {user.is_approved === false && (
                    <Button
-                    size="sm"
-                    variant="secondary"
-                    className="ml-auto h-7 text-xs"
+                    size="icon"
+                    variant="ghost"
+                    className="ml-auto h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-100"
                     onClick={(e) => handleApprove(e, user.user_id)}
+                    title="Approve User"
                   >
-                    Approve
+                    <Check className="h-4 w-4" />
                   </Button>
                 )}
               </button>

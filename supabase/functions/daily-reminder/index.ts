@@ -30,12 +30,36 @@ Deno.serve(async (req: Request) => {
         console.log(`Running Daily Reminder Check. IST Time: ${istTime.toISOString()}, Date: ${currentDateStr}`);
 
         // 3. Fetch all profiles with valid phone numbers
+        interface RequestBody {
+            target_user_ids?: string[];
+        }
+
+        let targetUserIds: string[] | null = null;
+        try {
+            const text = await req.text();
+            if (text) {
+                const body = JSON.parse(text) as RequestBody;
+                if (body && body.target_user_ids && Array.isArray(body.target_user_ids)) {
+                    targetUserIds = body.target_user_ids;
+                    console.log(`Manual trigger for ${targetUserIds.length} users.`);
+                }
+            }
+        } catch (_e) {
+            // Ignore parse errors
+        }
+
         // Types are 'any' here as we don't have the generated types imported, 
         // but the query is simple enough.
-        const { data: profiles, error: profilesError } = await supabaseAdmin
+        let query = supabaseAdmin
             .from('profiles')
             .select('user_id, full_name, phone')
             .not('phone', 'is', null);
+        
+        if (targetUserIds && targetUserIds.length > 0) {
+            query = query.in('user_id', targetUserIds);
+        }
+
+        const { data: profiles, error: profilesError } = await query;
 
         if (profilesError) {
             console.error("Error fetching profiles:", profilesError);
@@ -53,10 +77,10 @@ Deno.serve(async (req: Request) => {
             throw submissionsError;
         }
 
-        const submittedUserIds = new Set(submissions?.map((s: any) => s.user_id) || []);
+        const submittedUserIds = new Set(submissions?.map((s: { user_id: string }) => s.user_id) || []);
 
         // 5. Identify missing users
-        const missingUsers = profiles?.filter((p: any) => !submittedUserIds.has(p.user_id) && p.phone) || [];
+        const missingUsers = profiles?.filter((p: { user_id: string; phone: string | null }) => !submittedUserIds.has(p.user_id) && p.phone) || [];
 
         console.log(`Found ${missingUsers.length} users who haven't submitted today.`);
 
@@ -67,12 +91,19 @@ Deno.serve(async (req: Request) => {
             console.log(`Sending reminder to ${user.full_name} (${user.phone})...`);
 
             try {
+                let formattedPhone = user.phone.replace(/\D/g, ''); // Remove non-numeric
+                if (formattedPhone.length === 10) {
+                    formattedPhone = "91" + formattedPhone;
+                }
+                // If it's already 12 digits starting with 91, it's good. 
+                // Otherwise we send what we have (or could log a warning).
+                
                 // Construct GET URL with query params
                 const url = new URL("https://bot.engagelo.com/api/v1/whatsapp/send/template");
                 url.searchParams.append("apiToken", ENGAGELO_API_KEY || "");
                 url.searchParams.append("phone_number_id", "900886739777976");
                 url.searchParams.append("template_id", "290165");
-                url.searchParams.append("phone_number", user.phone);
+                url.searchParams.append("phone_number", formattedPhone);
 
                 const response = await fetch(url.toString(), {
                     method: 'GET',
@@ -85,7 +116,7 @@ Deno.serve(async (req: Request) => {
                 const resultText = await response.text();
                 try {
                     resultJson = JSON.parse(resultText);
-                } catch (e) {
+                } catch (_e) {
                     resultJson = { text: resultText };
                 }
 
@@ -99,9 +130,10 @@ Deno.serve(async (req: Request) => {
                     result: resultJson
                 });
 
-            } catch (err: any) {
+            } catch (err: unknown) {
+                const errorMessage = err instanceof Error ? err.message : 'Unknown error';
                 console.error(`Failed to send to ${user.full_name}:`, err);
-                results.push({ user: user.full_name, error: err.message });
+                results.push({ user: user.full_name, error: errorMessage });
             }
         }
 
@@ -119,9 +151,10 @@ Deno.serve(async (req: Request) => {
                 }
             },
         )
-    } catch (error: any) {
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         console.error("Error in daily-reminder function:", error);
-        return new Response(JSON.stringify({ error: error.message }), {
+        return new Response(JSON.stringify({ error: errorMessage }), {
             headers: {
                 ...corsHeaders,
                 "Content-Type": "application/json"

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Download, ChevronLeft, Calendar } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MeshBackground } from "@/components/ui/mesh-background";
+
 import { Line, Bar } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -36,6 +36,7 @@ export default function WeeklyReport() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedWeek, setSelectedWeek] = useState<string>("this-week");
   const [stats, setStats] = useState({
     totalRevenue: 0,
@@ -57,10 +58,14 @@ export default function WeeklyReport() {
   const lastWeekEnd = endOfWeek(subWeeks(today, 1), { weekStartsOn: 1 });
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
     const fetchWeeklyData = async () => {
       setLoading(true);
+      setError(null);
       const startDate = selectedWeek === "this-week" ? thisWeekStart : lastWeekStart;
       const endDate = selectedWeek === "this-week" ? thisWeekEnd : lastWeekEnd;
       
@@ -137,8 +142,9 @@ export default function WeeklyReport() {
           aiSummary: aiReport?.results_report || "No AI analysis available for this week yet.",
           aiActions: aiReport?.actions_report || "Complete your daily logs to get AI insights."
         });
-      } catch (error) {
-        console.error("Error loading weekly report", error);
+      } catch (err) {
+        console.error("Error loading weekly report", err);
+        setError("Failed to load report data. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -149,9 +155,61 @@ export default function WeeklyReport() {
 
   // ... (rest of code)
 
+  const handleDownload = () => {
+    window.print();
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-white">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-white">
+        <div className="text-center space-y-4">
+          <p className="text-red-400">{error}</p>
+          <Button onClick={() => window.location.reload()} variant="outline">Retry</Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-transparent text-white print:text-black print:bg-white">
-      {/* ... Header ... */}
+      {/* Header */}
+         <header className="border-b border-white/10 bg-black/20 backdrop-blur-md sticky top-0 z-50 print:hidden">
+        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+          <div className="flex items-center gap-4">
+             <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
+                <ChevronLeft className="w-5 h-5" />
+             </Button>
+             <div>
+                <h1 className="text-xl font-bold">Weekly Performance Report</h1>
+                <p className="text-sm text-gray-400">
+                    {format(selectedWeek === "this-week" ? thisWeekStart : lastWeekStart, "MMM d")} - {format(selectedWeek === "this-week" ? thisWeekEnd : lastWeekEnd, "MMM d, yyyy")}
+                </p>
+             </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Select value={selectedWeek} onValueChange={setSelectedWeek}>
+                <SelectTrigger className="w-[180px] bg-white/5 border-white/10">
+                    <SelectValue placeholder="Select Week" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="this-week">This Week</SelectItem>
+                    <SelectItem value="last-week">Last Week</SelectItem>
+                </SelectContent>
+            </Select>
+            <Button variant="outline" onClick={handleDownload} className="border-white/10 hover:bg-white/10">
+                <Download className="w-4 h-4 mr-2" /> Download PDF
+            </Button>
+          </div>
+        </div>
+      </header>
       
       <main className="container mx-auto px-4 py-8 space-y-8">
         

@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from '../_shared/cors.ts'
 
-const ENGAGELO_API_KEY = Deno.env.get("ENGAGELO_API_KEY");
+
 // Initialize admin client to fetch all users
 const supabaseAdmin = createClient(
     Deno.env.get('SUPABASE_URL') ?? '',
@@ -17,12 +17,37 @@ Deno.serve(async (req: Request) => {
     try {
         console.log("Starting Weekly Report Notification Run...");
 
+        interface RequestBody {
+            target_user_ids?: string[];
+        }
+
+        let targetUserIds: string[] | null = null;
+        try {
+            // Attempt to parse body if exists (for manual triggers)
+            const text = await req.text();
+            if (text) {
+                const body = JSON.parse(text) as RequestBody;
+                if (body && body.target_user_ids && Array.isArray(body.target_user_ids)) {
+                    targetUserIds = body.target_user_ids;
+                    console.log(`Manual trigger for ${targetUserIds.length} users.`);
+                }
+            }
+        } catch (_e) {
+            // Ignore JSON parse errors for empty body (cron jobs)
+        }
+
         // 1. Fetch all users
         // In a real app, maybe only 'active' users
-        const { data: users, error } = await supabaseAdmin
+        let query = supabaseAdmin
             .from('profiles')
             .select('user_id, full_name, phone')
             .not('phone', 'is', null);
+
+        if (targetUserIds && targetUserIds.length > 0) {
+            query = query.in('user_id', targetUserIds);
+        }
+
+        const { data: users, error } = await query;
 
         if (error) throw error;
         
@@ -55,9 +80,9 @@ Deno.serve(async (req: Request) => {
                 User: ${user.full_name}
                 Period: Weekly (${startDateStr} to ${endDateStr})
                 Habits Logged: ${habits.length}/7 days.
-                Business: Revenue: ${business.reduce((acc: number, curr: any) => acc + Number(curr.revenue), 0)}, Profit: ${business.reduce((acc: number, curr: any) => acc + Number(curr.gross_profit), 0)}.
+                Business: Revenue: ${business.reduce((acc: number, curr: { revenue: number }) => acc + Number(curr.revenue || 0), 0)}, Profit: ${business.reduce((acc: number, curr: { gross_profit: number }) => acc + Number(curr.gross_profit || 0), 0)}.
                 Learning Log Count: ${learning.length}.
-                Recent Learning: ${learning.map((l: any) => l.learning_point).slice(0, 3).join('; ')}
+                Recent Learning: ${learning.map((l: { learning_point: string }) => l.learning_point).slice(0, 3).join('; ')}
             `;
 
             let aiSummary = "Keep going!";
@@ -115,10 +140,18 @@ Deno.serve(async (req: Request) => {
             // 6. Send WhatsApp Notification
             // Construct GET URL for Template API
             const url = new URL("https://bot.engagelo.com/api/v1/whatsapp/send/template");
-            url.searchParams.append("apiToken", ENGAGELO_API_KEY || "");
+            // Use provided token directly for reliability, fallback to env
+            const token = "16104|Ep5Xe8xUHv9wi8IdpGJmOvaOjk3pDtORBh01Zw066f35d1f3";
+            
+            let formattedPhone = user.phone.replace(/\D/g, '');
+            if (formattedPhone.length === 10) {
+                formattedPhone = "91" + formattedPhone;
+            }
+
+            url.searchParams.append("apiToken", token);
             url.searchParams.append("phone_number_id", "900886739777976");
-            url.searchParams.append("template_id", "REPLACE_WITH_WEEKLY_TEMPLATE_ID"); // Still pending ID
-            url.searchParams.append("phone_number", user.phone);
+            url.searchParams.append("template_id", "291234");
+            url.searchParams.append("phone_number", formattedPhone);
             
             // Send request
             const response = await fetch(url.toString(), {
@@ -133,9 +166,10 @@ Deno.serve(async (req: Request) => {
             headers: { ...corsHeaders, "Content-Type": "application/json" }
         })
 
-    } catch (error: any) {
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         console.error("Error:", error);
-         return new Response(JSON.stringify({ error: error.message }), {
+         return new Response(JSON.stringify({ error: errorMessage }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
             status: 500,
         })

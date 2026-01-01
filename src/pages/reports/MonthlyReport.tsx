@@ -35,6 +35,7 @@ export default function MonthlyReport() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<string>("this-month");
   const [stats, setStats] = useState({
     totalRevenue: 0,
@@ -55,10 +56,14 @@ export default function MonthlyReport() {
   const lastMonthEnd = endOfMonth(subMonths(today, 1));
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
     const fetchMonthlyData = async () => {
       setLoading(true);
+      setError(null);
       const startDate = selectedMonth === "this-month" ? thisMonthStart : lastMonthStart;
       const endDate = selectedMonth === "this-month" ? thisMonthEnd : lastMonthEnd;
       
@@ -126,8 +131,9 @@ export default function MonthlyReport() {
           aiActions: aiReport?.actions_report || "Complete your daily business logs to unlock insights."
         });
 
-      } catch (error) {
-        console.error("Error loading monthly report", error);
+      } catch (err) {
+        console.error("Error loading monthly report", err);
+        setError("Failed to load report data. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -141,7 +147,22 @@ export default function MonthlyReport() {
   };
 
   if (loading) {
-     return <div className="min-h-screen flex items-center justify-center text-white">Loading Report...</div>
+     return (
+       <div className="min-h-screen flex items-center justify-center text-white">
+         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+       </div>
+     );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-white">
+        <div className="text-center space-y-4">
+          <p className="text-red-400">{error}</p>
+          <Button onClick={() => window.location.reload()} variant="outline">Retry</Button>
+        </div>
+      </div>
+    );
   }
 
   return (
