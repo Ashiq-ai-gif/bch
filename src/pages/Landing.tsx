@@ -1,13 +1,17 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
-import { Target, TrendingUp, Calendar, Bot, CheckCircle2, Zap } from "lucide-react";
+import { Target, TrendingUp, Calendar, Bot, CheckCircle2, Zap, Download } from "lucide-react";
+import { usePWAInstall } from "@/hooks/usePWAInstall";
+import { Navbar } from "@/components/layout/Navbar";
 
 const Landing = () => {
   const navigate = useNavigate();
+  const { isInstallable, install } = usePWAInstall();
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted">
+      <Navbar />
       {/* Hero Section */}
       <div className="container mx-auto px-4 py-16 md:py-24">
         <div className="text-center max-w-4xl mx-auto space-y-6">

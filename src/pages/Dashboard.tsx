@@ -9,9 +9,11 @@ import { SalesVelocityChart } from "@/components/dashboard/SalesVelocityChart";
 import { GoalProgressBar } from "@/components/dashboard/GoalProgressBar";
 import { GrowthStreak } from "@/components/dashboard/GrowthStreak";
 import { AIAnalysisPanel } from "@/components/dashboard/AIAnalysisPanel";
-import { PlusCircle, BookOpen, CheckSquare, TrendingUp, Shield, FileText, Calendar } from "lucide-react";
+import { PlusCircle, BookOpen, CheckSquare, TrendingUp, Shield, FileText, Calendar, Download } from "lucide-react";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
+import { Navbar } from "@/components/layout/Navbar";
+import { usePWAInstall } from "@/hooks/usePWAInstall";
 
 interface DashboardProps {
   userId?: string;
@@ -23,6 +25,7 @@ const Dashboard = ({ userId }: DashboardProps) => {
   const isViewMode = !!userId; // Flag to check if we are viewing as admin/another user
   const { isAdmin } = useAdminCheck();
   const navigate = useNavigate();
+  const { isInstallable, install } = usePWAInstall();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [hasGoals, setHasGoals] = useState(false);
@@ -163,31 +166,7 @@ const Dashboard = ({ userId }: DashboardProps) => {
 
   return (
     <div className="min-h-screen bg-transparent">
-      <header className="border-b border-white/10 bg-black/20 backdrop-blur-md sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-0">
-            <div>
-              <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-violet-400 to-fuchsia-400">
-                Welcome back, {profile?.full_name}!
-              </h1>
-              <p className="text-sm text-gray-400">{format(new Date(), "EEEE, MMMM d, yyyy")}</p>
-            </div>
-            {!isViewMode && (
-              <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
-                {isAdmin && (
-                  <Button variant="outline" onClick={() => navigate("/admin")} className="glass-card-hover border-white/10 shrink-0">
-                    <Shield className="w-4 h-4 mr-2" />Admin
-                  </Button>
-                )}
-                <Button variant="default" onClick={() => navigate("/daily-input")} className="btn-gradient shrink-0">
-                  <PlusCircle className="w-4 h-4 mr-2" />Daily Input
-                </Button>
-                <Button variant="ghost" onClick={signOut} className="hover:bg-white/10 shrink-0">Sign Out</Button>
-              </div>
-            )}
-          </div>
-        </div>
-      </header>
+      <Navbar />
 
       <main className="container mx-auto px-4 py-8 space-y-8">
         {!hasGoals ? (
